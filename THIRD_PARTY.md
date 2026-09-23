@@ -10,6 +10,7 @@
 | Vite 8.3.0 | https://github.com/vitejs/vite | MIT | Сборка компонента; нужен только разработчику, версии в package-lock.json |
 | OpenAI API, модель задаётся OPENAI_MODEL | https://openai.com/policies/services-agreement/ | Условия сервиса OpenAI; не open source | Необязательные объяснения A1 и предложения ID для A2; числа проверяет engine |
 | Официальная документация OpenAI | https://developers.openai.com/api/docs/libraries ; https://developers.openai.com/api/docs/guides/structured-outputs | Документация OpenAI; ссылка, без копирования больших фрагментов | Responses API и JSON-схема предложений A2 |
+| Документация GPT-6 Luna | https://developers.openai.com/api/docs/models/gpt-6-luna | Документация OpenAI; ссылка, без заимствования кода | Проверка reasoning defaults при диагностике реального live |
 | ТЗ и синтетический датасет HackAlem AI | [TASK.md](docs/TASK.md), [DATASET.md](docs/DATASET.md) | Предоставлены организаторами; отдельная лицензия не указана | Районы, меры, формула и правила |
 
 Транзитивные зависимости устанавливаются pip по метаданным перечисленных пакетов;
