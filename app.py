@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 from citysim.ai import explain_result
 from citysim.data import load_dataset
 from citysim.engine import baseline
+from components.city3d import render_city
+from ui.scene import build_scene_payload, validate_district_selection
 
 
 ROOT = Path(__file__).resolve().parent
@@ -23,8 +25,8 @@ def _demo_enabled() -> bool:
 
 st.set_page_config(page_title="Аким на 5 часов", page_icon="🏙️", layout="wide")
 st.title("Аким на 5 часов")
-st.caption("Скелет интерфейса · расчёт мер и отправка сценария пока не подключены")
-st.info("Доступен только исходный базовый расчёт. Сценарии пока нельзя отправлять на оценку.", icon="ℹ️")
+st.caption("Прототип 3D · пять районов и исходные показатели города")
+st.info("3D показывает исходное состояние. Выбор пяти решений и сравнение сценариев подключаются следующими этапами.", icon="ℹ️")
 
 dataset = load_dataset()
 result = baseline(dataset)
@@ -33,6 +35,34 @@ left, right = st.columns(2)
 left.metric("Бюджет", f"{dataset.budget}", help="Доступно для будущего сценария")
 right.metric("Базовый Score", f"{result.after.score:.4f}", help="Исходное состояние без выбранных мер")
 st.metric("Ncrit", result.after.n_crit, help="Количество критических показателей в baseline")
+
+indicator_labels = {
+    "T1": "Разгрузка дорог", "T2": "Доступность общественного транспорта",
+    "E1": "Озеленение", "E2": "Качество воздуха",
+    "S1": "Школы и детсады", "S2": "Поликлиники и первичная медпомощь",
+    "B1": "Безопасность улиц", "B2": "Безопасность дорожного движения",
+    "C1": "Надёжность ЖКХ", "C2": "Скорость решения обращений жителей",
+}
+indicator = st.selectbox(
+    "Показатель на 3D-макете", list(indicator_labels), index=4,
+    format_func=lambda code: f"{code} · {indicator_labels[code]}", key="scene_indicator",
+)
+st.session_state.setdefault("selected_city_district", "nura")
+payload = build_scene_payload(
+    dataset, result, selected_indicator=indicator,
+    selected_district=st.session_state.selected_city_district,
+)
+event = render_city(payload)
+if event is not None:
+    selected = validate_district_selection(event.district_selected, dataset)
+    if selected and selected != st.session_state.selected_city_district:
+        st.session_state.selected_city_district = selected
+        st.rerun()
+selected_name = next(
+    district.name for district in dataset.districts
+    if district.id == st.session_state.selected_city_district
+)
+st.caption(f"Выбран район: {selected_name}. Все числа в сцене — из расчётного движка.")
 
 st.subheader("Районы: базовое состояние")
 district_names = {district.id: district.name for district in dataset.districts}
