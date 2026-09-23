@@ -4,11 +4,20 @@ import json
 import os
 import unittest
 from copy import deepcopy
+from dataclasses import replace
 from unittest.mock import patch
 
 from citysim.data import load_dataset
-from citysim.engine import baseline
+from citysim.engine import baseline, simulate
+from citysim.models import Decision
+from ui import scene
 from ui.scene import build_scene_payload, validate_district_selection
+
+
+REFERENCE = (
+    Decision("M7", "nura"), Decision("M8", "nura"), Decision("M10", "nura"),
+    Decision("M12"), Decision("M5", "saryarka"),
+)
 
 
 class ScenePayloadTests(unittest.TestCase):
@@ -100,6 +109,69 @@ class ScenePayloadTests(unittest.TestCase):
         ):
             with self.subTest(event=event):
                 self.assertIsNone(validate_district_selection(event, self.dataset))
+
+    def test_single_nonbaseline_result_is_labeled_plan_a(self):
+        result = simulate(REFERENCE, self.dataset)
+        payload = build_scene_payload(self.dataset, result)
+        self.assertEqual(payload["states"][0]["id"], "A")
+        self.assertEqual(payload["states"][0]["label"], "Сохранённый план A")
+        nura = next(row for row in payload["states"][0]["districts"] if row["id"] == "nura")
+        self.assertEqual(nura["indicators"]["S1"], 48)
+        self.assertEqual(nura["indicators"]["S2"], 43.75)
+
+    def test_mapping_states_are_canonical_and_deeply_copied(self):
+        a = simulate(REFERENCE, self.dataset)
+        b = simulate((Decision("M7", "nura"), Decision("M8", "nura"),
+                      Decision("M10", "nura"), Decision("M12"),
+                      Decision("M5", "almaty")), self.dataset)
+        payload = build_scene_payload(
+            self.dataset, {"B": b, "baseline": self.result, "A": a}, diff_only=True,
+        )
+        self.assertEqual([state["id"] for state in payload["states"]], ["baseline", "A", "B"])
+        self.assertTrue(payload["diff_only"])
+        payload["states"][1]["districts"][0]["indicators"]["T1"] = -1
+        self.assertEqual(a.districts_after[0].indicators["T1"], 45)
+        self.assertEqual(build_scene_payload(self.dataset, a)["states"][0]["districts"][0]["indicators"]["T1"], 45)
+
+    def test_invalid_states_and_selectors_are_rejected_without_simulating(self):
+        a = simulate(REFERENCE, self.dataset)
+        with patch("citysim.engine.simulate", side_effect=AssertionError("must not simulate")):
+            for states, kwargs in (({}, {}), ({"B": a}, {}), ({"A": a}, {"diff_only": True}),
+                                   ({"C": a}, {}), ({"A": self.result}, {}),
+                                   ({"A": a}, {"diff_only": 1})):
+                with self.subTest(states=states, kwargs=kwargs), self.assertRaises(ValueError):
+                    build_scene_payload(self.dataset, states, **kwargs)
+
+    def test_result_shapes_and_finite_ranges_are_validated(self):
+        result = simulate(REFERENCE, self.dataset)
+        bad_district = replace(result.districts_after[0], indicators={"S1": float("nan")})
+        malformed = replace(result, districts_after=(bad_district, *result.districts_after[1:]))
+        with self.assertRaises(ValueError):
+            build_scene_payload(self.dataset, {"A": malformed})
+
+    def test_scene_events_keep_null_clear_and_drop_invalid_values(self):
+        ids = {district.id for district in self.dataset.districts}
+        self.assertTrue(hasattr(scene, "normalize_scene_events"))
+        self.assertEqual(scene.normalize_scene_events({"district_selected": None, "render_error": None}, ids),
+                         {"district_selected": None, "render_error": None})
+        self.assertEqual(scene.normalize_scene_events({"district_selected": {"district_id": None}}, ids),
+                         {"district_selected": {"district_id": None}})
+        self.assertEqual(scene.normalize_scene_events({"district_selected": {"district_id": "missing"},
+                                                 "render_error": {"code": "secret"},
+                                                 "extra": "ignored"}, ids), {})
+
+    def test_scene_events_accept_component_attribute_objects(self):
+        class Event:
+            district_id = "nura"
+        class ComponentValue:
+            district_selected = Event()
+            render_error = type("Error", (), {"code": "context_lost"})()
+            extra = "ignored"
+        self.assertTrue(hasattr(scene, "normalize_scene_events"))
+        self.assertEqual(scene.normalize_scene_events(ComponentValue(), {"nura"}), {
+            "district_selected": {"district_id": "nura"},
+            "render_error": {"code": "context_lost"},
+        })
 
 
 if __name__ == "__main__":
