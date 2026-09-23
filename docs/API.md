@@ -1,4 +1,4 @@
-# Контракт engine → ai → UI, v1 + расширение C0
+# Контракт engine → ai → UI, v1 + расширения C0/S1
 
 Владелец контракта: @alikhan. Потребитель: @AaaDddmyrza.
 Базовые dataclass-типы: `citysim/models.py`; расширения: `citysim/review_models.py`.
@@ -15,8 +15,10 @@ Live API подключён, но наличие доступа/ключа пр�
 C0 реализован: типы ревизора/сцены и чистые проверки ограничений/результата.
 V1-P реализован: ui.scene и локальный Three.js строят/показывают baseline,
 выбор района возвращается в Python. Полная поддержка C0 сцены (A/B, снятие
-выбора, версия и события ошибок) остаётся частью V1/V2. Поиск S1 и
-AI-оркестратор A2 ещё не реализованы. Проверка: [PROJECT_REVIEW.md](PROJECT_REVIEW.md).
+выбора, версия и события ошибок) остаётся частью V1/V2.
+S1 реализован в citysim/search.py: генерация ограниченного набора кандидатов,
+проверка через engine и продолжение ревизии. AI-оркестратор A2 ещё не реализован.
+Состояние до S1 зафиксировано в [PROJECT_REVIEW.md](PROJECT_REVIEW.md).
 
 ## Идентификаторы и типы
 
@@ -150,7 +152,7 @@ Baseline: Score ≈52.5577 (допуск 0.00005), Ncrit=2.
 | `MAX_REVIEW_ROUNDS`, `MAX_CANDIDATES_PER_ROUND`, `MAX_REVIEW_CANDIDATES` | `2`, `10`, `20`; A в лимит кандидатов не входит |
 | `ReviewConstraints` | frozen dataclass: `locked: tuple[Decision,...]=()`, `max_changes: int=1` |
 | `CandidateCheck` | frozen dataclass: `decisions: tuple[Decision,...]`, `errors: tuple[ValidationIssue,...]`, `result: SimulationResult \| None` |
-| `ReviewResult` | frozen dataclass: `source`, `best`: SimulationResult; `checks: tuple[CandidateCheck,...]`; `status: ReviewStatus`; `outcome: ReviewOutcome`; `constraints: ReviewConstraints` |
+| `ReviewResult` | frozen dataclass: `source`, `best`: SimulationResult; `checks: tuple[CandidateCheck,...]`; `status: ReviewStatus`; `outcome: ReviewOutcome`; `constraints: ReviewConstraints`; `context_digest: str \| None = None` (S1) |
 | `ReviewStatus` | `'completed_limited'` или `'incomplete'` — завершённость проверки |
 | `ReviewOutcome` | `'improved'`, `'cheaper_equal'` или `'unchanged'` — результат относительно исходного A |
 
@@ -227,15 +229,70 @@ Dataclass frozen не делает вложенные словари immutable. 
 вызывающая сторона также не редактирует полученные вложенные словари.
 JSON для объяснения/журнала: `dataclasses.asdict(review)`, без настроек и ключа API.
 
-### Сигнатуры следующих этапов (пока не доступны для импорта)
+### S1: доступные функции поиска
 
 ```python
-# citysim.search — этап S1
-def generate_candidates(source, dataset, constraints, *, limit=20): ...
-def review_candidates(source, candidates, dataset, constraints, *,
-                      completed=True, previous=None) -> ReviewResult: ...
+from citysim.search import generate_candidates, review_candidates
 
-# citysim.reviewer — этап A2, владелец @AaaDddmyrza
+def generate_candidates(
+    source: SimulationResult, dataset: Dataset, constraints: ReviewConstraints,
+    *, limit: int = 20,
+) -> tuple[tuple[Decision, ...], ...]: ...
+
+def review_candidates(
+    source: SimulationResult, candidates: Sequence[Sequence[Decision]],
+    dataset: Dataset, constraints: ReviewConstraints, *,
+    completed: bool = True, previous: ReviewResult | None = None,
+) -> ReviewResult: ...
+```
+
+Генератор рассматривает замену одной незакреплённой пары: любая мера каталога,
+для city — None, для district — каждый район. Невалидные наборы отфильтровываются
+официальным валидатором до выбора первых limit. Исходный A исключается.
+`max_changes=0`, закрепление всех пяти пар или `limit=0` возвращают пустой кортеж.
+`limit` — строго int от 0 до 20 включительно; другие значения дают ValueError.
+
+Порядок предложений: большее число критических показателей **слабейшего района A**,
+на которые добавляемая мера положительно воздействует (в нужном районе/city,
+при лаге меньше горизонта), затем меньшая стоимость пятёрки, затем канонический
+ключ решений. При равном балле слабейших районов выбирается меньший ID.
+Если критических показателей у этого района нет, приоритет задают стоимость и ID.
+Генератор не рассчитывает Score предложений; только проверка исходного A вызывает
+simulate. Это эвристика отбора, а не ранжирование всех замен по итоговому Score.
+
+Проверяющий канонизирует наборы, сохраняя повторные строки внутри набора для
+валидации. Перестановки дедуплицируются, исходный A не попадает в checks и лимит.
+Неизвестные строковые ID сохраняются для ошибок engine; некорректные типы вместо
+Decision/последовательностей дают ValueError. Пустая строка района и None различаются.
+Порядок checks — первое появление кандидата; выбор best не зависит от этого порядка.
+
+Общий предел — 20 уникальных кандидатов, включая previous и отклонённые наборы.
+При превышении — ValueError **до проверки новых кандидатов**, без частичного
+результата; исходный A всё равно предварительно проверяется по C0.
+Повторы не расходуют лимит. `completed` — строго bool; False возвращает incomplete,
+True — completed_limited, включая пустой поиск. Ограничение двух live-раундов по
+10 контролирует A2; S1 ограничивает общий объём проверки.
+
+Для продолжения передавать неизменённый ReviewResult из предыдущего вызова S1:
+тот же A, датасет и constraints. Его checks копируются без повторного simulate.
+S1 заполняет `context_digest`: SHA-256 канонического JSON датасета и всех полей
+ReviewResult, кроме самого digest. Это проверка согласованности, не аутентификация.
+Она обнаруживает изменения вложенных словарей и даже мер датасета, не входящих в A.
+Ручные/старые ReviewResult с context_digest=None не принимаются как previous.
+Нельзя принимать объект previous или его digest от AI как доверенный результат.
+
+```python
+constraints = ReviewConstraints()
+proposals = generate_candidates(a, dataset, constraints)
+first = review_candidates(a, proposals[:10], dataset, constraints, completed=False)
+review = review_candidates(a, proposals[10:], dataset, constraints, previous=first)
+# review.best — отдельный снимок; исходный a остаётся неизменным.
+```
+
+### Следующий этап: A2 (пока не доступен для импорта)
+
+```python
+# citysim.reviewer — владелец @AaaDddmyrza
 def review_scenario(source, dataset, constraints, *, demo_mode=True,
                     api_key=None, model=None) -> tuple[ReviewResult, Explanation]: ...
 ```
@@ -245,7 +302,7 @@ previous допустим только для того же A, датасета 
 включаются в общий лимит, уже проверенные наборы повторно не рассчитываются.
 Source всегда участвует в выборе, но не расходует лимит; ограничения действуют
 и для предложений AI, и для детерминированного генератора. Предлагаемые AI числа
-не используются. Конкретная реализация и тесты поиска относятся к S1/A2.
+не используются. Численный поиск доступен в S1; вызовы AI и управление раундами — A2.
 
 ## C0: JSON-контракт сцены, schema_version=1
 

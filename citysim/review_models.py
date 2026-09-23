@@ -51,6 +51,8 @@ class ReviewResult:
     status: ReviewStatus
     outcome: ReviewOutcome
     constraints: ReviewConstraints
+    # Set by S1; binds continuation to the dataset and an unmodified snapshot.
+    context_digest: str | None = None
 
 
 def validate_review_input(

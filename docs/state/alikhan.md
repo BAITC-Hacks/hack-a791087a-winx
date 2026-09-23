@@ -1,38 +1,39 @@
 # @alikhan — состояние
 
 ## Сейчас
-Новая сессия: анализ после merge 3D-прототипа, база `102a04f` в main.
-E1/E2/C0 завершены; S1 ещё не реализован. Зона: engine, поиск, API и запуск.
+S1 завершён на базе `1ffe574`; предыдущие E1/E2/C0 и V1-P уже в main.
+Зона: engine, поиск, API и запуск. Интерфейс/AI/3D — напарник.
 Коммит сводки: `git log -1 --format=%h -- docs/state/alikhan.md`.
 
 ## Сделано
-Получены `c5bacc9` / `102a04f`: baseline 3D напарника, ui.scene, тесты и сборка.
-docs/PROJECT_REVIEW.md: сверка ТЗ/кода, ограничения 3D, владельцы и приёмка этапов.
-API/PLAN/HANDOFF актуализированы без изменения численных правил и контрактов.
-Проверены Python/JS-тесты, сборка, зависимости и рендер в Chromium.
+citysim/search.py: generate_candidates/review_candidates, offline, максимум 20.
+review_models.py: context_digest для проверки previous/датасета без повторного simulate.
+tests/test_search.py и test_search_integrity.py: 30 новых тестов, полный check 100 OK.
+API/PLAN/IMPLEMENTATION_PLAN/HANDOFF обновлены; независимое ревью кода без замечаний.
 
 ## Не закончено
-S1: отсутствуют citysim/search.py и tests/test_search.py.
 U1/I1/A1/A2, полные V1/V2 — зона напарника; app.py вызывает только baseline.
-ui.scene фиксирует id/label baseline; A/B, версия и события требуют интеграции.
+Нужна численная сверка сквозного сценария после подключения S1 и UI напарником.
 
 ## Решения
-Следующий пакет — S1 по C0; напарник параллельно делает U1/I1.
-TASK/DATASET/data.py и engine сохранены; числа считает только engine.
+Генератор: помощь критическим показателям слабейшего района A, затем стоимость/ID.
+Официальная формула и engine сохранены; новые Score считает только simulate.
 max_changes=0/1; locked — точные пары исходного A; оба раунда проверяются против A.
 EPS=1e-9 относительно A; до 20 уникальных кандидатов, без обещания оптимума.
+context_digest проверяет согласованность снимка/датасета; это не аутентификация.
 
 ## Грабли
-frozen не защищает вложенные dict: S1 копирует source/best/checks/previous.
+previous брать неизменённым из S1; ручные экземпляры без digest отклоняются.
+Более 20 unique (с previous) → ValueError до новых расчётов; A/повторы не считаются.
 Не передавать simulate в текущий scene builder: он пометит сценарий как baseline.
 Старые записи HANDOFF исторические; актуальная сводка находится сверху.
 
 ## Проверка
-`python run.py --check` → 70 OK; `.venv/Scripts/python.exe -m pip check` OK.
-В components/city3d/frontend: `npm ci`, `npm test` → 4 OK, `npm run build` OK.
-`DEMO_MODE=1`, `python run.py --headless --port 8515`: Chromium рендерит 3D.
-S1: Нура 38; выбор Есиля → 48 / 62.9900 и подтверждение выбора в Python.
-Live AI, реальная потеря WebGL и физический pinch здесь не проверены.
+`python run.py --check` → 100 OK, включая AppTest; S1 работает без ключа/сети.
+Эталон A: 95 / 56.54307; best из 20: 80 / 56.69056 / Ncrit=0 (M5 → M11/Нура).
+Генерация + review20: медиана 17.53 мс, диапазон 16.90–18.38 мс, 10 прогонов.
+Два раунда по 10 дают тот же best, что один прогон 20; исходный A сохраняется.
+3D/JS проверены в предыдущем аудите 1ffe574; live AI здесь не вызывался.
 
 ## Следующий шаг
-Начать tests/test_search.py и реализовать generate_candidates/review_candidates S1.
+При поступлении U1/I1/A2 сверить интеграцию реального UI/ревизора с engine/S1.
