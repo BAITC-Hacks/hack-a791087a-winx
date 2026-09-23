@@ -9,8 +9,11 @@ from ui.scene import normalize_scene_events
 BUILD = Path(__file__).resolve().parent / 'build'
 
 
-def render_city(payload: ScenePayload, *, key: str = 'city3d') -> SceneEvents:
+def render_city(payload: ScenePayload, *, key: str = 'city3d', active_state: str | None = None) -> SceneEvents:
     """Mount trusted local assets; data travels separately from executable code."""
+    active_state = active_state or payload['states'][0]['id']
+    if active_state not in {state['id'] for state in payload['states']}:
+        raise ValueError('The active scene state must be included in the payload')
     js = BUILD / 'city3d.js'
     css = BUILD / 'city3d.css'
     if not js.is_file() or not css.is_file():
@@ -23,7 +26,7 @@ def render_city(payload: ScenePayload, *, key: str = 'city3d') -> SceneEvents:
         css=css.read_text(encoding='utf-8'),
     )
     result = component(
-        data={**payload, 'view_key': key},
+        data={**payload, 'view_key': key, 'active_state': active_state},
         key=key,
         height='content',
         default={'district_selected': {'district_id': payload['selected_district']}, 'render_error': None},
