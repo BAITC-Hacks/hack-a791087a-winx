@@ -2,7 +2,7 @@
 
 ## Сейчас
 U1/I1/A1 готовы в codex/scenario-flow на базе 102a04f.
-Коммит пакета: git log -1 --format=%h -- app.py.
+Коммит пакета e65e2ed; получен аудит напарника 1ffe574.
 Git email: adildaulet2005@gmail.com; зона app/ui/AI/3D.
 
 ## Сделано
