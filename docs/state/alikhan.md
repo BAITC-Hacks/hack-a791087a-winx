@@ -1,34 +1,38 @@
 # @alikhan — состояние
 
 ## Сейчас
-C0 завершён; предыдущие E1/E2 опубликованы в `f6110e7` / `1e812e4`.
-Git email: achabarovcuru@gmail.com; зона: engine, тесты, API, поиск и запуск.
-Текущий коммит состояния: `git log -1 --format=%h -- docs/state/alikhan.md`.
+Новая сессия: анализ после merge 3D-прототипа, база `102a04f` в main.
+E1/E2/C0 завершены; S1 ещё не реализован. Зона: engine, поиск, API и запуск.
+Коммит сводки: `git log -1 --format=%h -- docs/state/alikhan.md`.
 
 ## Сделано
-citysim/review_models.py: типы ревизора/сцены, лимиты, проверки исходника/locked/замен/EPS.
-tests/test_review_contracts.py: 20 тестов; baseline/подменённые числа, locked, EPS, два раунда.
-docs/API.md: опубликованы C0 и ScenePayload v1, отдельные будущие сигнатуры S1/A2.
-Пример JSON сцены из API выполнен на реальном engine и не делит словари с результатом.
-PLAN/HANDOFF обновлены; независимое ревью исправлено и проверено тестами.
+Получены `c5bacc9` / `102a04f`: baseline 3D напарника, ui.scene, тесты и сборка.
+docs/PROJECT_REVIEW.md: сверка ТЗ/кода, ограничения 3D, владельцы и приёмка этапов.
+API/PLAN/HANDOFF актуализированы без изменения численных правил и контрактов.
+Проверены Python/JS-тесты, сборка, зависимости и рендер в Chromium.
 
 ## Не закончено
-S1 (citysim/search.py) ещё не реализован; U1/I1/A1/V1/V2/A2 — зона напарника.
-README/IMPLEMENTATION_PLAN: запрос актуализировать E1/E2/C0 передан через HANDOFF.
+S1: отсутствуют citysim/search.py и tests/test_search.py.
+U1/I1/A1/A2, полные V1/V2 — зона напарника; app.py вызывает только baseline.
+ui.scene фиксирует id/label baseline; A/B, версия и события требуют интеграции.
 
 ## Решения
-API v1, TASK/DATASET/data.py и engine сохранены; C0 в отдельном модуле.
+Следующий пакет — S1 по C0; напарник параллельно делает U1/I1.
+TASK/DATASET/data.py и engine сохранены; числа считает только engine.
 max_changes=0/1; locked — точные пары исходного A; оба раунда проверяются против A.
-EPS=1e-9 относительно A исключает накопление допуска; ranking описан в API.
-ScenePayload — TypedDict, runtime-builder в ui.scene принадлежит напарнику.
+EPS=1e-9 относительно A; до 20 уникальных кандидатов, без обещания оптимума.
 
 ## Грабли
-Не импортировать search/reviewer/ui.scene до реализации соответствующих этапов.
-Типы frozen не защищают вложенные dict: S1 обязан копировать снимки и previous.
+frozen не защищает вложенные dict: S1 копирует source/best/checks/previous.
+Не передавать simulate в текущий scene builder: он пометит сценарий как baseline.
+Старые записи HANDOFF исторические; актуальная сводка находится сверху.
 
 ## Проверка
-`python run.py --check` → 65 тестов OK, включая AppTest, offline AI и контракты C0.
-Эталон simulate: cost=95, remaining=5, Score=56.54307, Ncrit=0.
+`python run.py --check` → 70 OK; `.venv/Scripts/python.exe -m pip check` OK.
+В components/city3d/frontend: `npm ci`, `npm test` → 4 OK, `npm run build` OK.
+`DEMO_MODE=1`, `python run.py --headless --port 8515`: Chromium рендерит 3D.
+S1: Нура 38; выбор Есиля → 48 / 62.9900 и подтверждение выбора в Python.
+Live AI, реальная потеря WebGL и физический pinch здесь не проверены.
 
 ## Следующий шаг
-S1: реализовать generate_candidates/review_candidates с ограничением 20 и тестами.
+Начать tests/test_search.py и реализовать generate_candidates/review_candidates S1.
