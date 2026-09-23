@@ -125,6 +125,11 @@ def explain_result(
         "Дай практический следующий шаг только на основе этих данных; предложения по мерам назови гипотезами, "
         "которые требуется перепроверить движком. Если данных недостаточно, прямо скажи об этом."
     )
+    # Luna defaults to medium reasoning, which can consume the whole text budget.
+    # Do not infer support for 'none' from another model's name or family.
+    luna = model == "gpt-6-luna"
+    if luna:
+        instructions += " Ответь кратко, до 250 слов: результат, сильные стороны, риски, следующий шаг."
     from openai import OpenAI, OpenAIError
 
     try:
@@ -134,8 +139,11 @@ def explain_result(
             instructions=instructions,
             input=json.dumps(asdict(result), ensure_ascii=False),
             store=False,
-            max_output_tokens=700,
+            max_output_tokens=1600 if luna else 700,
+            **({"reasoning": {"effort": "none"}} if luna else {}),
         )
+        if response.status != "completed":
+            return _demo_explanation(result, "OpenAI не завершил ответ; показано демо-объяснение.")
         output = response.output_text
         if not output or not output.strip():
             return _demo_explanation(result, "OpenAI вернул пустой ответ; показано демо-объяснение.")

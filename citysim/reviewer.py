@@ -177,6 +177,8 @@ async def _live_rounds(
                 text={"format": deepcopy(_PROPOSAL_FORMAT)},
                 store=False, max_output_tokens=4096,
                 timeout=min(REQUEST_TIMEOUT_SECONDS, remaining),
+                # Keep the 15-second budget for IDs; 'none' is model-specific.
+                **({"reasoning": {"effort": "none"}} if model == "gpt-6-luna" else {}),
             ),
             timeout=min(REQUEST_TIMEOUT_SECONDS, remaining),
         )
