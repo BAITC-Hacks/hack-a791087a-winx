@@ -19,9 +19,10 @@
 | Инструмент | Ссылка | Условия | Использование |
 |---|---|---|---|
 | Codex / OpenAI | https://openai.com/codex/ | Условия OpenAI | Планирование, код, документация и проверка |
-| Субагент gpt-6-luna | https://openai.com/ | Условия OpenAI | Независимое чтение ТЗ и создание части скелета |
+| Субагент gpt-6-luna | https://openai.com/ | Условия OpenAI | Независимое чтение ТЗ, создание части скелета и аудит математики/AI/UI |
 | Скилл subagent-models | Локальный `.codex/skills/subagent-models/SKILL.md` | Пользовательский скилл; лицензия не указана | Выбор модели и effort субагентов |
 | Скилл OpenAI Docs | https://github.com/openai/skills | См. лицензию источника | Проверка документации SDK |
+| Скиллы Superpowers: using-superpowers, brainstorming, dispatching-parallel-agents, systematic-debugging, verification-before-completion | https://github.com/obra/superpowers | См. лицензию источника | Уточнение текущей идеи по запросу пользователя, независимый аудит, диагностика проверки и сверка результатов |
 | Git | https://git-scm.com/ | GPL-2.0 | История и синхронизация команды |
 | pip | https://github.com/pypa/pip | MIT | Установка зависимостей |
 
