@@ -18,7 +18,7 @@
 Источники правил: [TASK.md](TASK.md), [DATASET.md](DATASET.md).
 Действующий контракт: [API.md](API.md). Краткий трекер: [PLAN.md](PLAN.md).
 
-План актуализирован по `d454f61` с учётом явного требования пользователя о веб-приложении с рабочей 3D-сценой. Проверка P0 зафиксирована в REVIEW.md. Незавершённые этапы ниже не считаются реализованными.
+План актуализирован по `cee214e` и пакету V1-P с учётом явного требования пользователя о веб-приложении с рабочей 3D-сценой. Проверка P0 зафиксирована в REVIEW.md. Незавершённые этапы ниже не считаются реализованными.
 
 ## Оценка идеи и принятый объём
 
@@ -91,35 +91,17 @@ flowchart LR
 5. Нет WebGL/сети либо компонент прислал неизвестный район: таблицы работают,
    недопустимое событие игнорируется — проверки V1/V2.
 
-## E1 — правила и расчёт: @alikhan
+## E1 — правила и расчёт: @alikhan — завершён
 
-**Файлы:** engine.py, tests/test_engine.py. **Вход/выход:** действующие
-`validate_scenario(decisions, dataset) -> ValidationResult` и
-`simulate(decisions, dataset) -> SimulationResult`, без изменения API v1.
+Опубликован в `f6110e7`; файлы: citysim/engine.py, tests/test_engine.py.
 
-- [ ] Добавить падающие тесты всех 9 кодов ошибок API, включая неизвестный ID,
-  стоимость повторных строк, city с районом, 4/6 решений и 3 меры одного направления.
-  Для каждой проверки остальные параметры делать валидными, чтобы изолировать причину.
-- [ ] Прогнать `.venv/Scripts/python.exe -m unittest discover -s tests -p test_engine.py -v`:
-  новые проверки должны падать на заглушках, существующие baseline-тесты оставаться зелёными.
-- [ ] Реализовать валидатор: собрать все применимые ошибки, безопасно пропустить
-  неизвестные ID при проверке метаданных; отдельно глобальный M1/M3 и локальные пары.
-- [ ] Реализовать simulate: validate → новые словари → эффекты с лагом → три
-  фиксированные синергии → один clip → compute_score → deltas и канонический результат.
-- [ ] Проверить эталон и исключение для невалидного набора:
+- [x] Валидатор всех 9 кодов ошибок; стоимость повторов/unknown ID; городские и районные цели.
+- [x] simulate: validate → эффекты с лагами → синергии → clip → Score → deltas.
+- [x] Эталон: cost=95, remaining_budget=5, Score=56.54307, Ncrit=0.
+- [x] Набор 61 валиден; все 120 перестановок эталона дают одинаковый результат.
+- [x] Невалидный набор не рассчитывается; входные данные не изменяются.
 
-```python
-reference = (Decision('M7', 'nura'), Decision('M8', 'nura'),
-             Decision('M10', 'nura'), Decision('M12'), Decision('M5', 'saryarka'))
-r = simulate(reference, load_dataset())
-self.assertEqual((r.cost, r.remaining_budget, r.after.n_crit), (95, 5, 0))
-self.assertAlmostEqual(r.after.score, 56.54307, places=7)
-with self.assertRaises(InvalidScenarioError):
-    simulate(reference[:4], load_dataset())
-```
-
-- [ ] Набор 61 валиден; reverse(reference) даёт тот же результат, вход не мутирует.
-  Обновить статус E1 в PLAN/state, выполнить полный check и push: `feat: implement scenario engine`.
+Сигнатуры validate_scenario/simulate и API v1 сохранены. Подтверждение — тесты и API.md.
 
 ## U1 — форма пяти решений: @AaaDddmyrza
 
@@ -178,20 +160,15 @@ self.assertIsNone(edited.plan_b)
 - [ ] @alikhan сверяет числа; README получает реальный сценарий. Полный check,
   коммит/push `feat: connect scenario calculation and saved state`.
 
-## E2 — границы математики: @alikhan
+## E2 — границы математики: @alikhan — завершён
 
-**Файлы:** tests/test_engine.py, engine.py только при обнаруженных дефектах.
+Опубликован в `1e812e4`; 12 тестов в tests/test_engine_boundaries.py.
+Подробный отчёт: [ENGINE_REVIEW.md](ENGINE_REVIEW.md).
 
-- [ ] В таблицу тестов включить бюджет ровно 100 и 101; <40 и =40; все три
-  синергии без масштабирования лагом; все конфликты, в том числе M1/M3 в разных районах.
-  Примеры стоимости: M3/Есиль + M7/Нура + M8/Нура + M14/город + M11/Алматы = 100;
-  M3/Есиль + M5/Сарыарка + M2/город + M12/город + M11/Алматы = 101.
-- [ ] Синтетическими копиями входа проверить clip у 0/100 и сложение до clip.
-  Отдельно M11 даёт T1=-1.75 до clip, а не положительный эффект.
-- [ ] Для каждого результата проверить `after-before == indicator_deltas`;
-  `effects` может отличаться от delta при clip и содержит источник M10+M12 отдельно.
-- [ ] Проверить независимость before/after/входа и порядок решений; выполнить
-  полный check. Коммит/push `test: cover scenario boundaries and effect traces`.
+- [x] Бюджет 100/101, строгий порог 40, лаги 1/2/3/4, все синергии и конфликты.
+- [x] Clip с обеих сторон после сложения эффектов; отрицательный T1 у M11.
+- [x] effects до clip, indicator_deltas после clip; трассировка всех показателей.
+- [x] Независимость словарей результата, исходных данных и повторных расчётов.
 
 ## A1 — паспорт и объяснение: @AaaDddmyrza
 
@@ -210,47 +187,23 @@ self.assertIsNone(edited.plan_b)
   настроенном доступе; отсутствие такого доступа не блокирует демо.
 - [ ] Полный check, README и коммит/push `feat: explain scenario outcomes and tradeoffs`.
 
-## C0 — контракт расширений: @alikhan, потребитель @AaaDddmyrza
+## C0 — контракт расширений: @alikhan — завершён
 
-**Файлы:** новый citysim/review_models.py, docs/API.md. До этого коммита
-описанные ниже типы — проект контракта, а не доступные импорты. API v1 не ломать.
+Опубликован в `cee214e`; citysim/review_models.py, tests/test_review_contracts.py,
+[API.md](API.md). Типы доступны для импорта; 20 тестов контракта проходят.
 
-```python
-@dataclass(frozen=True)
-class ReviewConstraints:
-    locked: tuple[Decision, ...] = ()
-    max_changes: int = 1
+- [x] ReviewConstraints, CandidateCheck, ReviewResult; status и outcome независимы.
+- [x] max_changes — строго int 0/1; locked — точные пары исходного A.
+- [x] Проверка исходного результата через simulate до поиска/AI; baseline не является A.
+- [x] EPS=1e-9 всегда относительно первоначального A; цепочки допусков запрещены.
+- [x] ScenePayload/SceneState/SceneEvents — TypedDict; schema_version=1.
 
-@dataclass(frozen=True)
-class CandidateCheck:
-    decisions: tuple[Decision, ...]
-    errors: tuple[ValidationIssue, ...]
-    result: SimulationResult | None
-
-@dataclass(frozen=True)
-class ReviewResult:
-    source: SimulationResult
-    best: SimulationResult
-    checks: tuple[CandidateCheck, ...]
-    status: Literal['completed_limited', 'incomplete']
-    outcome: Literal['improved', 'cheaper_equal', 'unchanged']
-    constraints: ReviewConstraints
-```
-
-- [ ] Закрепить числовой допуск EPS=1e-9 для сравнения неокруглённых Score.
-  Выше на >EPS — улучшение; в пределах EPS и дешевле — cheaper_equal;
-  при равенстве Score/стоимости сохраняется A, остальные доступны в checks.
-- [ ] «Одно изменение» = замена пары measure_id/district_id; перестановка — ноль.
-  Для валидных пятёрок `changes = 5 - len(set(A.decisions) & set(candidate))`.
-  Оба раунда сравниваются с первоначальным A; цепочка двух замен лимит не обходит.
-- [ ] locked — подмножество пар исходного A; закреплённый район тоже неизменяем.
-  Неверные constraints отклонить ValueError до поиска; baseline не принимать как A.
-- [ ] Согласовать ScenePayload schema_version=1: states=[{id,label,is_baseline,
-  decisions,cost,remaining_budget,score,districts,district_scores}], selected_indicator,
-  selected_district,diff_only. districts включают id/name/indicators; баллы из engine.
-  События JS: district_selected={district_id}, render_error={code}; камера — локальное состояние JS.
-- [ ] Записать эти поля/семантику в API, обновить HANDOFF и выполнить
-  `API: feat: define review and scene contracts`. После push потребитель делает pull.
+Правило выбора: improved с максимальным точным Score, затем меньшей стоимостью;
+при отсутствии improved — cheaper_equal с минимальной стоимостью, затем Score;
+иначе сохраняется A. При равенстве альтернатив — канонический ключ из API.
+TypedDict не валидирует runtime-данные: builder/рендер и события остаются задачей V1.
+V1-P уже показывает baseline; A/B, снятие выбора, нормализация событий и проверка
+версии протокола ещё не реализованы. Поиск S1 и AI-оркестрация A2 остаются открытыми.
 
 ## S1 — детерминированный ревизор: @alikhan
 
@@ -402,5 +355,5 @@ UI полного поиска, свободный текст поручений
 Сигнатура Components v2 проверена в установленном Streamlit 1.64.0.
 Подход v2 и двусторонний обмен описаны в [Streamlit Docs](https://docs.streamlit.io/develop/concepts/custom-components/components-v2).
 Локальная npm-сборка Three.js описана в [Three.js Installation](https://threejs.org/manual/pages/installation.html).
-Версии новых npm-зависимостей фиксируются при V1 в package-lock/THIRD_PARTY;
-до V1 они не установлены и не считаются зависимостями работающего P0.
+В локальном V1-P уже установлены Three.js 0.186.0 и Vite 8.3.0; версии зафиксированы
+в components/city3d/frontend/package-lock.json и THIRD_PARTY. Полный V1 ещё открыт.
