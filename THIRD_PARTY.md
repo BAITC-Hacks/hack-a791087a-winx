@@ -23,7 +23,8 @@
 | Скилл subagent-models | Локальный `.codex/skills/subagent-models/SKILL.md` | Пользовательский скилл; лицензия не указана | Выбор модели и effort субагентов |
 | Скилл OpenAI Docs | https://github.com/openai/skills | См. лицензию источника | Проверка документации SDK |
 | Скилл idea-forge | Локальный `.codex/skills/idea-forge/SKILL.md` | Пользовательский скилл; лицензия не указана | Генерация и уточнение концепции, собранной в docs/PROPOSAL.md |
-| Скиллы Superpowers: using-superpowers, brainstorming, dispatching-parallel-agents, systematic-debugging, verification-before-completion | https://github.com/obra/superpowers | См. лицензию источника | Уточнение текущей идеи по запросу пользователя, независимый аудит, диагностика проверки и сверка результатов |
+| Скиллы Superpowers: using-superpowers, brainstorming, writing-plans, dispatching-parallel-agents, systematic-debugging, verification-before-completion | https://github.com/obra/superpowers | См. лицензию источника | Уточнение идеи, технический план на двоих, независимый аудит и проверка |
+| Документация Streamlit Components v2 и Three.js | https://docs.streamlit.io/develop/concepts/custom-components/components-v2 ; https://threejs.org/manual/pages/installation.html | Документация источников; без заимствования продуктового шаблона | Проверка способа локального встраивания 3D при планировании; Three.js пока не установлен |
 | Git | https://git-scm.com/ | GPL-2.0 | История и синхронизация команды |
 | pip | https://github.com/pypa/pip | MIT | Установка зависимостей |
 
