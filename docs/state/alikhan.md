@@ -1,17 +1,17 @@
 # @alikhan — состояние
 
 ## Сейчас
-Синхронизирован main до `d12ac6a`; начинаются E1 и E2 по запросу пользователя.
+E1 реализован; E2 проверяется. База напарника `d12ac6a`, checkpoint `9a080d5`.
 Git email: achabarovcuru@gmail.com; зона: engine, тесты, API, поиск и запуск.
-Последний собственный коммит до сессии: `7069af2`.
+Текущий коммит состояния: `git log -1 --format=%h -- docs/state/alikhan.md`.
 
 ## Сделано
-Прочитаны TASK/DATASET, IDEA, PLAN, IMPLEMENTATION_PLAN, API, HANDOFF и состояния.
-Получены технический план `d454f61` и live-launcher `d12ac6a` напарника.
-`python run.py --check` подтверждает 15 успешных offline-тестов на текущем checkout.
+В citysim/engine.py реализованы validate_scenario и simulate по API v1.
+tests/test_engine.py: 21 тест, все коды ошибок, эталон/61, 120 перестановок.
+API уточняет сочетания ошибок и канонизацию effects; общие типы не менялись.
+План независимо проверен; формулы, примеры и зависимости E1/E2 согласованы с DATASET.
 
 ## Не закончено
-E1: validate_scenario/simulate в citysim/engine.py пока NotImplementedError.
 E2: граничные тесты и проверка трассировки ещё не реализованы.
 U1/I1/A1/V1/V2 — зона напарника; C0/S1 следуют после E2.
 
@@ -26,7 +26,8 @@ README/UI описывают скелет; законченный engine сам 
 В HANDOFF есть запрос подтвердить отрицательный T1 от M11 и семантику effects тестами.
 
 ## Проверка
-`python run.py --check` → 15 тестов OK; baseline 52.5577, Ncrit=2, demo без сети.
+`python run.py --check` → 33 теста OK, включая AppTest и offline AI.
+Эталон simulate: cost=95, remaining=5, Score=56.54307, Ncrit=0.
 
 ## Следующий шаг
-Добавить падающие тесты всех правил и эталона E1, затем реализовать engine.
+Завершить E2: границы чисел и независимость трассировки/вложенных словарей.
