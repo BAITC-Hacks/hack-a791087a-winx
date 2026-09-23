@@ -1,33 +1,35 @@
 # @alikhan — состояние
 
 ## Сейчас
-P0 завершён: план, API v1 и запускаемый скелет. Git email: achabarovcuru@gmail.com.
-Последний push до записи: `93c2a24` (исходные документы). P0 — коммит с этим файлом;
-его хэш: `git log -1 --format=%h -- docs/state/alikhan.md`.
+P0 готов; концепция собрана в docs/PROPOSAL.md и передана на планирование напарнику.
+Синхронизация: `fa17dde`, аудит P0 и уточнение IDEA от @AaaDddmyrza.
+Свой предыдущий коммит: `c11ee30`; текущий: `git log -1 --format=%h -- docs/state/alikhan.md`.
 
 ## Сделано
-Скопированы AGENTS.md, TASK.md, DATASET.md; добавлены IDEA, PLAN, API, HANDOFF.
-Созданы data/models/engine/ai, app.py, run.py, env-шаблон, зависимости, README, THIRD_PARTY.
-Baseline вычисляется из данных; 8 тестов прошли, HTTP / и /_stcore/health → 200.
+Обсуждение «Аким — два будущих города» собрано в один самостоятельный PROPOSAL.md.
+Включены 3D, сравнение A/B, AI-ревизор, оптимальный выбор человека, приёмка и ограничения.
+В HANDOFF добавлен запрос @AaaDddmyrza составить план; в THIRD_PARTY указан idea-forge.
+TASK/DATASET, IDEA/PLAN напарника, код, данные и API в этом этапе не менялись.
 
 ## Не закончено
-`citysim/engine.py`: validate_scenario и simulate — NotImplementedError (E1).
-Форма пяти мер и полный сценарий — U1/I1; live API без реального ключа не проверен.
+E1: validate_scenario/simulate — NotImplementedError; U1/I1: форма и полный сценарий.
+3D, ревизор, поиск и расширения из PROPOSAL пока только предложены.
+Новый план составляет @AaaDddmyrza; новые контракты требуют API-коммита.
 
 ## Решения
-Python + Streamlit + OpenAI; запуск `python run.py`, без Docker.
-Только engine считает числа; AI объясняет SimulationResult; без ключа demo.
-API v1 — `docs/API.md` и `citysim/models.py`; district_id — английские стабильные ID.
-После общего скелета ai/app принадлежат @AaaDddmyrza, engine/data/contracts — @alikhan.
+Python + Streamlit + OpenAI, Three.js предложен для визуализации; запуск одной командой.
+ТЗ, датасет, Score и правила сохраняются; LLM не считает числа.
+Нет улучшения при ограниченном поиске — не доказательство глобального оптимума.
+Без новых мер показатели не ухудшаются; 3D — условное отображение результата модели.
 
 ## Грабли
-Baseline с нулём решений — только ориентир, не валидный игровой сценарий.
-У city district_id=None; 5 решений не означают все 5 направлений.
-README явно отделяет текущий скелет от ещё не реализованной приёмки I1.
+8 тестов покрывают P0, не полный сценарий. Baseline — ориентир, не валидные ноль решений.
+effects до clip и deltas после clip нельзя выдавать за аддитивные вклады в Score.
+В HANDOFF есть запрос ко мне подтвердить эффекты/дельты и отрицательный T1 у M11 тестами.
 
 ## Проверка
-`python run.py --check` → 8 тестов OK; `python run.py` → Score 52.5577, Ncrit=2, demo.
-Проверено Windows / Python 3.14.4; первый запуск требует интернет для pip.
+`python run.py --check` → 8 тестов; `python run.py` → baseline 52.5577, Ncrit=2, demo.
+Продуктовый код остаётся версией P0; аудит напарника — docs/REVIEW.md.
 
 ## Следующий шаг
-E1: сначала тесты правил и эталона 95/56.5431/0, затем реализовать validate_scenario и simulate.
+Получить обновлённый PLAN от @AaaDddmyrza; свою реализацию начать с E1 и эталонных тестов.
