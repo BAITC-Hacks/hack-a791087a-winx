@@ -40,5 +40,12 @@ export function validatePayload(data) {
     ids.push(state.id);
   }
   if ((ids.includes('B') && !ids.includes('A')) || (data.diff_only && !(ids.includes('A') && ids.includes('B')))) return 'render_failed';
+  if (data.active_state !== undefined && (typeof data.active_state !== 'string' || !ids.includes(data.active_state))) return 'render_failed';
   return null;
+}
+
+// active_state is an optional bridge transport hint, not part of the saved scene contract.
+export function getActiveState(data) {
+  const id = data.active_state === undefined ? data.states[0]?.id : data.active_state;
+  return data.states.find(state => state.id === id) || null;
 }

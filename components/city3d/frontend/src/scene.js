@@ -10,7 +10,9 @@ const LAYOUT = {
 const HOME = [17, 20, 23];
 
 // Building shapes and positions are schematic; only bars encode data.
-export function createScene(viewport, state, indicator, selectedId, onSelect, onError, savedCamera, onCameraChange) {
+export function createScene(viewport, state, indicator, selectedId, onSelect, onError, savedCamera, onCameraChange, options = {}) {
+  const changedIds = new Set(options.changedDistrictIds || []);
+  const diffOnly = options.diffOnly === true;
   const lifecycle = createSceneLifecycle(onError);
   let renderer;
   let scene;
@@ -152,7 +154,20 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
     viewport.append(label);
     lifecycle.addCleanup(() => label.remove());
     labels.push({ element: label, position: new THREE.Vector3(x, 0.2, z + 2.15) });
-    districts.push({ id: district.id, group, border, slab, label });
+    const changed = diffOnly && changedIds.has(district.id);
+    if (changed) label.classList.add('changed');
+    if (diffOnly && !changed) {
+      // Give this district its own faded materials without changing shared map materials.
+      group.traverse(object => {
+        if (!object.material) return;
+        object.material = object.material.clone();
+        object.material.transparent = true;
+        object.material.opacity = 0.3;
+        if ('depthWrite' in object.material) object.material.depthWrite = false;
+        allMaterials.add(object.material);
+      });
+    }
+    districts.push({ id: district.id, group, border, slab, label, changed });
   }
   const raycaster = new THREE.Raycaster();
   const tap = createTapTracker();
@@ -173,7 +188,7 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
     if (disposed) return;
     for (const district of districts) {
       const selected = district.id === id;
-      district.border.material.color.setHex(selected ? 0x133f38 : 0xb1c5b7);
+      district.border.material.color.setHex(selected ? 0x133f38 : district.changed ? 0x508668 : 0xb1c5b7);
       district.label.classList.toggle('selected', selected);
       district.label.setAttribute('aria-pressed', String(selected));
     }

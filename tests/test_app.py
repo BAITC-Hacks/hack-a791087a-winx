@@ -51,6 +51,7 @@ class ApplicationSmokeTest(unittest.TestCase):
             self.assertFalse(app.exception)
             self.assertEqual(explain.call_count, 1)
             self.assertTrue(any('56.5431' in item.value for item in app.markdown))
+            app.radio(key='scene_layer').set_value('ecology').run()
             app.selectbox(key='scene_indicator').set_value('E1').run()
             self.assertEqual(explain.call_count, 1)
             self.assertTrue(any('56.5431' in item.value for item in app.markdown))

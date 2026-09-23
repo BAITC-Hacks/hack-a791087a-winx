@@ -42,3 +42,12 @@ class SceneComponentTest(unittest.TestCase):
                 patch('components.city3d.st.components.v2.component') as component:
             self.assertEqual(render_city(self.payload), {'render_error': {'code': 'render_failed'}})
             component.assert_not_called()
+
+    def test_active_state_hint_is_validated_and_does_not_modify_payload(self):
+        component = Mock(return_value={})
+        with patch('components.city3d.st.components.v2.component', return_value=component):
+            render_city(self.payload, active_state='baseline')
+            self.assertEqual(component.call_args.kwargs['data']['active_state'], 'baseline')
+            self.assertNotIn('active_state', self.payload)
+            with self.assertRaises(ValueError):
+                render_city(self.payload, active_state='B')

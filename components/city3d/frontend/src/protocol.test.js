@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validatePayload } from './protocol.js';
+import { getActiveState, validatePayload } from './protocol.js';
 
 const codes = ['T1','T2','E1','E2','S1','S2','B1','B2','C1','C2'];
 function payload() {
@@ -33,4 +33,17 @@ test('state identity and ordering cannot label a scenario baseline or invent B',
     d=>d.diff_only=true]) {
     const data=payload(); mutate(data); assert.equal(validatePayload(data),'render_failed');
   }
+});
+test('the bridge may select any included state and omission selects the first state',()=>{
+  const data=payload();
+  assert.equal(getActiveState(data).id,'baseline');
+  data.states.push({...structuredClone(data.states[0]),id:'A',label:'План A',is_baseline:false,
+    decisions:Array.from({length:5},(_,i)=>({measure_id:`M${i+1}`,district_id:null}))});
+  data.active_state='A';
+  assert.equal(validatePayload(data),null);
+  assert.equal(getActiveState(data).id,'A');
+});
+test('unknown bridge active state fails payload validation',()=>{
+  const data=payload(); data.active_state='C';
+  assert.equal(validatePayload(data),'render_failed');
 });

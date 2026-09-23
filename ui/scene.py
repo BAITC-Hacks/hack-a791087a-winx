@@ -22,6 +22,27 @@ _RENDER_ERROR_CODES = frozenset({
 })
 
 
+def build_scene_details(result: SimulationResult, dataset: Dataset, indicator: str,
+                        district_id: str | None) -> dict:
+    """Filter catalog measures and applied engine effects for the chosen indicator."""
+    names = {d.id: d.name for d in dataset.districts}
+    if indicator not in dataset.weights or (district_id is not None and district_id not in names):
+        raise ValueError('Unknown scene selection')
+    measures = {m.id: m for m in dataset.measures}
+    return {
+        'measures': [
+            {'Код': d.measure_id, 'Мера': measures[d.measure_id].name,
+             'Где': names.get(d.district_id, 'Весь город'), 'Лаг, кварталы': measures[d.measure_id].lag}
+            for d in result.decisions if indicator in measures[d.measure_id].effects
+            and (district_id is None or d.district_id in (None, district_id))],
+        'effects': [
+            {'Источник': e.source, 'Район': names[e.district_id], 'Показатель': e.indicator,
+             'Эффект до ограничения 0–100': e.delta}
+            for e in result.effects if e.indicator == indicator
+            and (district_id is None or e.district_id == district_id)],
+    }
+
+
 def _finite_number(value: object) -> bool:
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         return False

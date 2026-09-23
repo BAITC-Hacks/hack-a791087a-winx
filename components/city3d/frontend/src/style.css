@@ -9,6 +9,7 @@
 .city-viewport { height: 480px; position: relative; overflow: hidden; background: #e9eee7; }
 .city-viewport canvas { width: 100%; height: 100%; display: block; touch-action: none; }
 .map-tag { position: absolute; left: 18px; top: 17px; z-index: 3; font-size: 12px; font-weight: 650; background: #f9fbf2ed; padding: 9px 12px; border: 1px solid #d1ddcf; border-radius: 7px; pointer-events: none; }
+.difference-note { position: absolute; left: 18px; top: 61px; z-index: 3; max-width: calc(100% - 36px); background: #f9fbf2ed; border: 1px solid #c3d5c7; border-radius: 7px; padding: 7px 10px; color: #315d48; font-size: 11px; font-weight: 650; pointer-events: none; }
 .camera-controls { position: absolute; bottom: 15px; right: 16px; display: flex; gap: 5px; z-index: 4; }
 .city-root button { font: inherit; cursor: pointer; color: #274d3c; }
 .camera-controls button { background: #fcfff7; border: 1px solid #bdcec0; border-radius: 7px; font-size: 12px; min-width: 36px; height: 36px; padding: 0 10px; box-shadow: 0 2px 5px #1d48300c; }
@@ -18,6 +19,8 @@
 .district-label { position: absolute; transform: translate(-50%, -10%); display: flex; align-items: center; gap: 7px; background: #f9fcf3f2; border: 1px solid #b2c4b5; border-radius: 6px; padding: 5px 8px; font-size: 11px !important; white-space: nowrap; box-shadow: 0 2px 8px #23473212; z-index: 2; }
 .district-label strong { font-size: 13px; border-left: 1px solid #b5c8b7; padding-left: 7px; }
 .district-label.selected { color: #fff; background: #234f40; border-color: #234f40; }
+.district-label.changed { border: 2px solid #4e8b65; box-shadow: 0 0 0 2px #f5fff0, 0 2px 9px #2347322a; }
+.district-label.changed.selected { border-color: #f4d38b; }
 .city-root .district-label.selected:hover { background: #163f32; }
 .city-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 11px; padding: 13px 18px 0; }
 .legend-alert { color: #a64c28; font-weight: 650; }
@@ -42,6 +45,12 @@
 .indicator-cell span { font-size: 9px; }
 .indicator-cell.is-critical { background: #f9e9da; }
 .indicator-cell.active { border-color: #618675; }
+.comparison-line { display: block; color: #577364; font-size: 9px; line-height: 1.35; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.indicator-comparison { white-space: pre-line; font-size: 8px; }
+.district-overview-row { align-items: flex-start; }
+.overview-value { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; text-align: right; }
+.selected-comparison { display: flex; flex-direction: column; gap: 5px; margin: -12px 0 20px; padding: 12px 0; border-top: 1px solid #e0e5da; border-bottom: 1px solid #e0e5da; font-size: 12px; font-variant-numeric: tabular-nums; }
+.selected-comparison .detail-label { margin: 0; }
 .detail-footnote { color: #687b6b; font-size: 10px; line-height: 1.65; margin: 20px 0 0; }
 .city-caption { color: #5b7263; font-size: 11px; line-height: 1.5; padding: 13px 24px; border-top: 1px solid #d5dfd4; margin: 0; }
 .city-fallback { position: absolute; inset: 80px 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: #3c5948; }

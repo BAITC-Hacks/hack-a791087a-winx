@@ -1,38 +1,39 @@
 # @AaaDddmyrza — состояние
 
 ## Сейчас
-V1: da77274 в codex/scene-v1; получен A2 backend d5e0e47 из main.
+A2 UI/V2 готовы в codex/review-ui-v2 от main85ae360 (V1/PR3 объединён).
+Последний коммит пакета: git log -1 -- app.py ui/review.py.
 Git email: adildaulet2005@gmail.com; зона app/ui/AI/3D.
 
 ## Сделано
-Ранее объединены U1/I1/A1 и S1 через PR #2.
-app.py: baseline/A, после расчёта выбирается A, таблица текущего снимка.
-ui/scene.py: ScenePayload v1 из снимков, проверки, копирование, SceneEvents.
-components/city3d: schema, null-выбор, сохранение камеры, cleanup/fallback/retry.
-Локальный JS/CSS-bundle пересобран. README/PLAN/HANDOFF актуализированы.
+app.py + ui/review.py: reviewer по кнопке, locks/0–1, status/outcome/warning/checks.
+ui/state.py: независимые A/B/review; ручнойB, accept/keep; сброс при новомA/constraints.
+Принятие B обновляет черновик, очищает объяснение, B и ревизию.
+V2: baseline/A/B, пять слоёв по два показателя, различия выбранного индикатора.
+Карточка A/B/Δ, меры и effects из engine, таблица текущего состояния при fallback.
+Локальный bundle пересобран; README/IDEA/PLAN/DEMO/HANDOFF обновлены.
 
 ## Не закончено
-A2 backend готов у @alikhan; UI ревизора и V2 A/B/различия ещё не подключены.
+Совместная приёмка R и чистая установка по README.
 Платный live API и физический pinch на телефоне не проверены.
-Текст статуса V1 в API.md требует правки владельцем, запрос в HANDOFF.
+Вводный статус API.md обновляет владелец; запрос в HANDOFF.
 
 ## Решения
 TASK/DATASET/data.py/engine/shared models/API/reviewer не изменены.
-Python выбирает один снимок baseline/A по C0; JS не считает модель.
-Черновик не меняет сохранённый A; новый расчёт обновляет сцену.
-Ключи не нужны для 3D; платных запросов не было, demo-превью без ключа.
-Постоянного хранилища нет: reload/перезапуск сервера может сбросить сессию.
+ScenePayload C0 прежний; active_state — частный параметр bridge рядом с view_key.
+Менять ограничения → сброс B/ревизии; редактировать draft → сохранить A/B.
+Demo-превью и тесты без настоящих API-вызовов; ключи не выводились/не коммитились.
 
 ## Грабли
-При старой сборке в браузере перезапустить Streamlit и перезагрузить страницу.
-.env.example содержит пользовательские локальные правки; не включать в V1-коммит.
+Очистка max_changes даёт None: guard возвращает1, регрессионный AppTest проходит.
+При старом Python-модуле перезапустить Streamlit; планы после reload могут исчезнуть.
+.env.example имеет пользовательские правки; не включать в продуктовый коммит.
 
 ## Проверка
-python run.py --check: 155 Python; frontend npm test: 11 JS; npm run build.
-Chromium: Нура baseline 38/35, A 48/43.75; камера и выбор JS→Python.
-Стенд bundle: context_lost, webgl_unavailable, schema, retry; CSP только localhost.
-Узкая ширина: приложение760, компонент iframe390; подробнее README компонента.
-Локальный demo: http://127.0.0.1:8514; обычный запуск python run.py.
+python run.py --check: 178 Python; frontend npm test: 16 JS; npm run build.
+Demo: A95/56.54307 → B80/56.69056; три ухудшения видны, A не меняется до принятия.
+Chromium: ручнойB/A=B/accept, камера, WebGL loss/unavailable/retry, компонент390.
+Preview http://127.0.0.1:8517 (DEMO_MODE=1); сценарий docs/DEMO.md.
 
 ## Следующий шаг
-Подключить готовый review_scenario к UI с явным принятием B.
+Совместно с @alikhan выполнить R: чистая установка и сквозная приёмка по DEMO.md.

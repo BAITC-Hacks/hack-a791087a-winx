@@ -1,6 +1,7 @@
 import { createScene } from './scene.js';
 import { getViewState } from './view-state.js';
-import { validatePayload } from './protocol.js';
+import { getActiveState, validatePayload } from './protocol.js';
+import { compareStates, getChangedDistrictIds } from './comparison.js';
 import './style.css';
 
 const TITLES = {
@@ -34,9 +35,21 @@ export default function ({ parentElement, data, key, setStateValue }) {
     view.error = null;
     setStateValue('render_error', null);
   }
-  const state = data.states[0];
+  const state = getActiveState(data);
+  if (!state) {
+    host.append(element('p', 'city-caption', 'Сцена не может прочитать данные. Показатели доступны в таблице под макетом.'));
+    host.dataset.stateId = '';
+    if (view.error !== 'render_failed') setStateValue('render_error', { code: 'render_failed' });
+    view.error = 'render_failed';
+    view.protocolError = true;
+    return () => host.replaceChildren();
+  }
   host.dataset.stateId = state.id;
   const indicator = data.selected_indicator;
+  const stateA = data.states.find(item => item.id === 'A');
+  const stateB = data.states.find(item => item.id === 'B');
+  const comparison = stateA && stateB ? compareStates(stateA, stateB) : null;
+  const changedDistrictIds = comparison ? getChangedDistrictIds(comparison, indicator) : [];
   let selectedId = data.selected_district;
   let scene = null;
   let failed = false;
@@ -50,6 +63,12 @@ export default function ({ parentElement, data, key, setStateValue }) {
   const viewport = element('div', 'city-viewport');
   const mapTag = element('div', 'map-tag', `${indicator} · ${TITLES[indicator]}`);
   viewport.append(mapTag);
+  if (data.diff_only) {
+    const note = changedDistrictIds.length
+      ? 'Изменения A → B по выбранному показателю'
+      : 'Различий по выбранному показателю нет';
+    viewport.append(element('div', 'difference-note', note));
+  }
   const cameraControls = element('div', 'camera-controls');
   const controls = [
     ['Общий вид', () => scene?.reset()], ['Сверху', () => scene?.reset(true)],
@@ -74,6 +93,12 @@ export default function ({ parentElement, data, key, setStateValue }) {
   detail.setAttribute('aria-live', 'polite');
   const buttons = new Map();
 
+  function changeLabel(change) {
+    if (!change) return '';
+    const delta = change.delta > 0 ? `+${change.delta}` : String(change.delta);
+    return `A ${change.a} · B ${change.b} · Δ ${delta}`;
+  }
+
   function updateDetails() {
     detail.replaceChildren();
     for (const [id, button] of buttons) button.setAttribute('aria-pressed', String(id === selectedId));
@@ -82,8 +107,13 @@ export default function ({ parentElement, data, key, setStateValue }) {
       detail.append(element('p', 'indicator-title', `${indicator} · ${TITLES[indicator]}`));
       for (const district of state.districts) {
         const value = district.indicators[indicator];
-        const row = element('div', `district-score ${value < 40 ? 'is-critical' : ''}`);
-        row.append(element('span', '', district.name), element('strong', '', String(value)));
+        const row = element('div', `district-score district-overview-row ${value < 40 ? 'is-critical' : ''}`);
+        const name = element('span', '', district.name);
+        const scoreBlock = element('span', 'overview-value');
+        scoreBlock.append(element('strong', '', String(value)));
+        const change = comparison?.[district.id]?.indicators[indicator];
+        if (change) scoreBlock.append(element('small', 'comparison-line', changeLabel(change)));
+        row.append(name, scoreBlock);
         detail.append(row);
       }
       detail.append(element('p', 'detail-footnote', `Score города: ${state.score.toFixed(4)}. Выберите район для всех десяти показателей.`));
@@ -96,6 +126,12 @@ export default function ({ parentElement, data, key, setStateValue }) {
     const valueLine = element('div', `indicator-value ${value < 40 ? 'is-critical' : ''}`);
     valueLine.append(element('strong', '', String(value)), element('span', '', '/ 100'));
     detail.append(valueLine, element('p', `indicator-status ${value < 40 ? 'is-critical' : ''}`, value < 40 ? 'Ниже критического порога 40' : 'Не ниже критического порога 40'));
+    const selectedChange = comparison?.[district.id]?.indicators[indicator];
+    if (selectedChange) {
+      const comparisonBlock = element('div', 'selected-comparison');
+      comparisonBlock.append(element('span', 'detail-label', 'Сравнение A → B'), element('strong', '', changeLabel(selectedChange)));
+      detail.append(comparisonBlock);
+    }
     const score = element('div', 'district-score');
     score.append(element('span', '', 'Районный балл'), element('strong', '', state.district_scores[district.id].toFixed(4)));
     detail.append(score, element('div', 'detail-label', 'Все показатели района'));
@@ -104,9 +140,16 @@ export default function ({ parentElement, data, key, setStateValue }) {
       const cell = element('div', `indicator-cell ${number < 40 ? 'is-critical' : ''} ${id === indicator ? 'active' : ''}`);
       cell.title = TITLES[id];
       cell.append(element('span', '', id), element('strong', '', String(number)));
+      const change = comparison?.[district.id]?.indicators[id];
+      if (change) {
+        const delta = change.delta > 0 ? `+${change.delta}` : String(change.delta);
+        cell.append(element('small', 'comparison-line indicator-comparison', `A ${change.a}\nB ${change.b}\nΔ ${delta}`));
+      }
       indicators.append(cell);
     }
-    detail.append(indicators, element('p', 'detail-footnote', 'Числа взяты из расчётной модели. Здания и расположение районов — условные.'));
+    detail.append(indicators, element('p', 'detail-footnote', comparison
+      ? 'В ячейках показаны A, B и Δ B−A. Текущее значение, статус и балл относятся к выбранному плану. Здания и расположение районов — условные.'
+      : 'Числа взяты из расчётной модели. Здания и расположение районов — условные.'));
   }
   function select(id) {
     if (id !== null && !state.districts.some(district => district.id === id)) return;
@@ -165,7 +208,7 @@ export default function ({ parentElement, data, key, setStateValue }) {
   function startScene() {
     try {
       const created = createScene(viewport, state, indicator, selectedId, select, onError, view.camera,
-        camera => { view.camera = camera; });
+        camera => { view.camera = camera; }, { diffOnly: data.diff_only, changedDistrictIds });
       if (failed) {
         created.dispose();
         viewport.dataset.renderReady = 'false';
