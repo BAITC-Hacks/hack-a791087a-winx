@@ -46,6 +46,7 @@
 .city-caption { color: #5b7263; font-size: 11px; line-height: 1.5; padding: 13px 24px; border-top: 1px solid #d5dfd4; margin: 0; }
 .city-fallback { position: absolute; inset: 80px 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: #3c5948; }
 .city-fallback p { max-width: 380px; font-size: 13px; line-height: 1.6; }
+.retry-scene { border: 1px solid #bdcec0; border-radius: 7px; background: #fcfff7; min-height: 44px; padding: 8px 16px; }
 @media (max-width: 760px) {
   .city-layout { grid-template-columns: 1fr; }
   .city-header { padding: 17px; align-items: flex-start; }

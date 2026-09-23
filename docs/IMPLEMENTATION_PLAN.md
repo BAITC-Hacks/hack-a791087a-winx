@@ -228,9 +228,14 @@ previous без пересчёта старых кандидатов. Конкр
 components/city3d/__init__.py; frontend/package.json, package-lock.json,
 vite.config.js, src/main.js, src/scene.js; build/city3d.js.
 **Интерфейсы:** `build_scene_payload(dataset, states, *, selected_indicator='S1',
-selected_district=None, diff_only=False) -> dict`; `render_city(payload, key='city') -> dict`.
+selected_district=None, diff_only=False) -> ScenePayload`; `render_city(payload, key='city3d') -> SceneEvents`.
 
-- [ ] Подтвердить протокол: Python передаёт подписанные районы, JS возвращает `district_selected`. Использовать Components v2 установленного Streamlit:
+**Готово:** baseline/сохранённый A, Python-переключатель передаёт один выбранный снимок;
+C0 разрешает этот режим V1. A/B и «только различия» остаются V2.
+Приёмка: 130 Python-тестов, 11 JS-тестов, Chromium и локальная сборка;
+[проверки и ограничения](../components/city3d/README.md).
+
+- [x] Подтвердить протокол: Python передаёт подписанные районы, JS возвращает `district_selected`. Использовать Components v2 установленного Streamlit:
 
 ```python
 city = st.components.v2.component(
@@ -241,21 +246,21 @@ event = city(data=payload, key='city', on_district_selected_change=lambda: None,
              on_render_error_change=lambda: None)
 ```
 
-- [ ] Vite library build: один ES-module с default-export функции component;
+- [x] Vite library build: один ES-module с default-export функции component;
   Three.js и OrbitControls включить в bundle, не external/CDN. npm install
   --save-exact three; npm install --save-dev --save-exact vite; npm run build.
   Зафиксировать lock и проверенные версии/лицензии в THIRD_PARTY. Node не нужен для запуска Python.
-- [ ] Пять устойчиво расположенных районов, простые геометрические объекты;
+- [x] Пять устойчиво расположенных районов, простые геометрические объекты;
   подписи, одна шкала 0–100, маркер <40. Символ меры — обозначение проекта,
   а не количество реально построенных зданий. Данные передавать через data,
   подписи через textContent; не встраивать LLM-текст в JavaScript/HTML.
-- [ ] Python отклоняет неизвестный district_id. Выбор района фильтрует панель,
+- [x] Python отклоняет неизвестный district_id. Выбор района фильтрует панель,
   не меняет решения A. Камера не сбрасывается при обновлении payload.
   Освободить renderer/геометрию/listeners при удалении компонента.
-- [ ] Тест payload: значения равны SimulationResult, ключа/env нет, JSON сериализуется.
-  В браузере: отключить внешнюю сеть, выбрать район, потерять WebGL-контекст —
+- [x] Тест payload: значения равны SimulationResult, ключа/env нет, JSON сериализуется.
+  В браузерном стенде с CSP только для localhost: выбрать район, потерять WebGL-контекст —
   сообщение и таблицы сохраняются. AppTest не подтверждает рендеринг WebGL.
-- [ ] Не переносить расчёты в JS. Исправить обмен данными и добиться рендеринга сцены в поддерживаемом браузере; таблицы и fallback показывают тот же результат при недоступности WebGL. После приёмки отметить V1 в PLAN.
+- [x] Не переносить расчёты в JS. Исправить обмен данными и добиться рендеринга сцены в поддерживаемом браузере; таблицы и fallback показывают тот же результат при недоступности WebGL. После приёмки отметить V1 в PLAN.
 
 ## A2 — A/B и AI-оркестрация: @alikhan (сервер), @AaaDddmyrza (UI)
 
@@ -332,4 +337,4 @@ UI полного поиска, свободный текст поручений
 Подход v2 и двусторонний обмен описаны в [Streamlit Docs](https://docs.streamlit.io/develop/concepts/custom-components/components-v2).
 Локальная npm-сборка Three.js описана в [Three.js Installation](https://threejs.org/manual/pages/installation.html).
 В локальном V1-P уже установлены Three.js 0.186.0 и Vite 8.3.0; версии зафиксированы
-в components/city3d/frontend/package-lock.json и THIRD_PARTY. Полный V1 ещё открыт.
+в components/city3d/frontend/package-lock.json и THIRD_PARTY. V1 завершён; V2 остаётся открыт.

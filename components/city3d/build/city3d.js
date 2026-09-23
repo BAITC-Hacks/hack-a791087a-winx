@@ -11854,200 +11854,337 @@ function Pl() {
 	};
 }
 //#endregion
+//#region src/lifecycle.js
+function Fl(e) {
+	let t = /* @__PURE__ */ new Set(), n = [], r = !1;
+	function i(n) {
+		if (!t.has(n)) {
+			t.add(n);
+			try {
+				e(n);
+			} catch {}
+		}
+	}
+	function a(e) {
+		try {
+			e();
+		} catch {
+			i("render_failed");
+		}
+	}
+	return {
+		report: i,
+		run(e, ...t) {
+			try {
+				return e(...t);
+			} catch {
+				i("render_failed");
+				return;
+			}
+		},
+		addCleanup(e) {
+			r ? a(e) : n.push(e);
+		},
+		dispose() {
+			if (!r) for (r = !0; n.length;) a(n.pop());
+		}
+	};
+}
+//#endregion
 //#region src/scene.js
-var Fl = {
+var Il = {
 	saryarka: [-5.8, -3.3],
 	baikonur: [0, -3.3],
 	almaty: [5.8, -3.3],
 	nura: [-3, 2.8],
 	esil: [3, 2.8]
-}, Il = [
+}, Ll = [
 	17,
 	20,
 	23
 ];
-function Ll(e, t, n, r, i, a, o, s) {
-	let c = new dl({
-		antialias: !0,
-		alpha: !0
-	});
-	c.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7)), c.setClearColor(15331047, 1), c.shadowMap.enabled = !0, c.shadowMap.type = 2, c.outputColorSpace = Ie, c.domElement.setAttribute("aria-label", "3D-макет. Выбор района также доступен кнопками под сценой."), e.prepend(c.domElement);
-	let l = new jn(), u = new ba(42, 1, .1, 140);
-	u.position.fromArray(Il);
-	let d = new xl(u, c.domElement);
-	d.target.set(0, 0, 0), d.minDistance = 15, d.maxDistance = 50, d.minPolarAngle = .12, d.maxPolarAngle = Math.PI / 2.25, d.enablePan = !1, d.enableDamping = !1, o?.position?.length === 3 && o?.target?.length === 3 && (u.position.fromArray(o.position), d.target.fromArray(o.target)), d.update(), l.add(new ca(16777215, 6586738, 2.6));
-	let f = new Ca(16775144, 3.5);
-	f.position.set(-9, 20, 11), f.castShadow = !0, f.shadow.mapSize.set(1024, 1024), Object.assign(f.shadow.camera, {
-		left: -17,
-		right: 17,
-		top: 15,
-		bottom: -15,
-		far: 60
-	}), f.shadow.normalBias = .04, l.add(f);
-	let p = new bi(1, 1, 1), m = /* @__PURE__ */ new Map();
-	function h(e) {
-		return m.has(e) || m.set(e, new zi({
-			color: e,
-			roughness: .83
-		})), m.get(e);
-	}
-	function g(e, t, n, r, i, a, o, s) {
-		let c = new Yr(p, h(s));
-		return c.position.set(t, n, r), c.scale.set(i, a, o), c.castShadow = !0, c.receiveShadow = !0, e.add(c), c;
-	}
-	g(l, 0, -.45, 0, 18.5, .55, 13.2, 14147542), g(l, 0, -.12, -.1, 17.9, .08, .7, 12043452);
-	for (let e = -8; e < 9; e += 1.1) g(l, e, -.065, -.1, .45, .015, .04, 16382966);
-	let _ = new Di(.36, 0), v = [], y = [];
-	for (let r of t.districts) {
-		let [t, a] = Fl[r.id] || [0, 0], o = new Cn();
-		o.position.set(t, 0, a), o.userData.districtId = r.id, l.add(o);
-		let s = r.indicators[n], c = s < 40 ? 12872765 : new Y(9553326).lerp(new Y(2386006), s / 100).getHex(), u = g(o, 0, 0, 0, 5.15, .28, 4.7, 16053225), d = new hi(new Ei(new bi(5.25, .32, 4.8)), new ri({ color: 11650487 }));
-		o.add(d), [
-			[
-				-.6,
-				-.7,
-				1.2
-			],
-			[
-				.55,
-				-.8,
-				1.8
-			],
-			[
-				1.5,
-				-.7,
-				.9
-			],
-			[
-				-.7,
-				.8,
-				.7
-			],
-			[
-				.5,
-				.75,
-				1.15
-			]
-		].forEach(([e, t, n], r) => {
-			g(o, e, n / 2 + .16, t, .72, n, .85, r % 2 ? 15329243 : 14016728), g(o, e, n + .2, t, .78, .09, .91, 16579312);
-			for (let r = .45; r < n; r += .4) g(o, e, r + .17, t + .433, .5, .12, .012, 8560022);
-		});
-		for (let [e, t] of [
-			[1.8, 1],
-			[1.8, 1.75],
-			[-1.1, 1.75]
-		]) {
-			g(o, e, .35, t, .07, .45, .07, 9017209);
-			let n = new Yr(_, h(7379837));
-			n.position.set(e, .76, t), n.castShadow = !0, o.add(n);
-		}
-		let f = s / 100 * 3;
-		g(o, -1.9, 1.68, -.75, .1, 3, .1, 13227213), g(o, -1.9, f / 2 + .18, -.75, .48, f || .015, .48, c), g(o, -1.9, 1.38, -.75, .72, .04, .72, 3362630);
-		let p = document.createElement("button");
-		p.className = "district-label", p.type = "button", p.dataset.district = r.id, p.setAttribute("aria-label", `${r.name}: ${n} — ${s}. Выбрать район`);
-		let m = document.createElement("span");
-		m.textContent = r.name;
-		let b = document.createElement("strong");
-		b.textContent = String(s), p.append(m, b), p.onclick = () => i(r.id), e.append(p), y.push({
-			element: p,
-			position: new K(t, .2, a + 2.15)
-		}), v.push({
-			id: r.id,
-			group: o,
-			border: d,
-			slab: u,
-			label: p
-		});
-	}
-	let b = !1, x = new Va(), S = Pl();
-	function C() {
-		if (!b) {
-			c.render(l, u), s({
-				position: u.position.toArray(),
-				target: d.target.toArray()
+function Rl(e, t, n, r, i, a, o, s) {
+	let c = Fl(a), l, u, d, f, p = !1;
+	try {
+		try {
+			l = new dl({
+				antialias: !0,
+				alpha: !0
 			});
-			for (let { element: t, position: n } of y) {
-				let r = n.clone().project(u), i = (r.x * .5 + .5) * e.clientWidth, a = (-r.y * .5 + .5) * e.clientHeight;
-				t.style.left = `${i}px`, t.style.top = `${a}px`, t.hidden = r.z > 1 || i < 0 || i > e.clientWidth || a < 0 || a > e.clientHeight;
+		} catch {
+			let e = /* @__PURE__ */ Error("WebGL is unavailable");
+			throw e.code = "WEBGL_UNAVAILABLE", e;
+		}
+		c.addCleanup(() => {
+			try {
+				l.forceContextLoss();
+			} finally {
+				try {
+					l.dispose();
+				} finally {
+					l.domElement.remove();
+				}
+			}
+		}), l.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7)), l.setClearColor(15331047, 1), l.shadowMap.enabled = !0, l.shadowMap.type = 1, l.outputColorSpace = Ie, l.domElement.setAttribute("aria-label", "3D-макет. Выбор района также доступен кнопками под сценой."), e.prepend(l.domElement), u = new jn();
+		let a = /* @__PURE__ */ new Set(), m = /* @__PURE__ */ new Set();
+		c.addCleanup(() => {
+			u.traverse((e) => {
+				e.geometry && a.add(e.geometry), e.material && m.add(e.material);
+			}), a.forEach((e) => e.dispose()), m.forEach((e) => e.dispose());
+		});
+		let h = new ba(42, 1, .1, 140);
+		h.position.fromArray(Ll), d = new xl(h, l.domElement), c.addCleanup(() => {
+			try {
+				d.removeEventListener("change", g);
+			} finally {
+				d.dispose();
+			}
+		}), d.target.set(0, 0, 0), d.minDistance = 15, d.maxDistance = 50, d.minPolarAngle = .12, d.maxPolarAngle = Math.PI / 2.25, d.enablePan = !1, d.enableDamping = !1;
+		function g() {
+			c.run(D);
+		}
+		o?.position?.length === 3 && o?.target?.length === 3 && (h.position.fromArray(o.position), d.target.fromArray(o.target)), d.update(), u.add(new ca(16777215, 6586738, 2.6));
+		let _ = new Ca(16775144, 3.5);
+		_.position.set(-9, 20, 11), _.castShadow = !0, _.shadow.mapSize.set(1024, 1024), Object.assign(_.shadow.camera, {
+			left: -17,
+			right: 17,
+			top: 15,
+			bottom: -15,
+			far: 60
+		}), _.shadow.normalBias = .04, u.add(_);
+		let v = new bi(1, 1, 1);
+		a.add(v);
+		let y = /* @__PURE__ */ new Map();
+		function b(e) {
+			if (!y.has(e)) {
+				let t = new zi({
+					color: e,
+					roughness: .83
+				});
+				y.set(e, t), m.add(t);
+			}
+			return y.get(e);
+		}
+		function x(e, t, n, r, i, a, o, s) {
+			let c = new Yr(v, b(s));
+			return c.position.set(t, n, r), c.scale.set(i, a, o), c.castShadow = !0, c.receiveShadow = !0, e.add(c), c;
+		}
+		x(u, 0, -.45, 0, 18.5, .55, 13.2, 14147542), x(u, 0, -.12, -.1, 17.9, .08, .7, 12043452);
+		for (let e = -8; e < 9; e += 1.1) x(u, e, -.065, -.1, .45, .015, .04, 16382966);
+		let S = new Di(.36, 0);
+		a.add(S);
+		let C = [], w = [];
+		for (let r of t.districts) {
+			let [t, o] = Il[r.id] || [0, 0], s = new Cn();
+			s.position.set(t, 0, o), s.userData.districtId = r.id, u.add(s);
+			let l = r.indicators[n], d = l < 40 ? 12872765 : new Y(9553326).lerp(new Y(2386006), l / 100).getHex(), f = x(s, 0, 0, 0, 5.15, .28, 4.7, 16053225), p = new bi(5.25, .32, 4.8);
+			a.add(p);
+			let h = new Ei(p);
+			a.add(h);
+			let g = new ri({ color: 11650487 });
+			m.add(g);
+			let _ = new hi(h, g);
+			s.add(_), [
+				[
+					-.6,
+					-.7,
+					1.2
+				],
+				[
+					.55,
+					-.8,
+					1.8
+				],
+				[
+					1.5,
+					-.7,
+					.9
+				],
+				[
+					-.7,
+					.8,
+					.7
+				],
+				[
+					.5,
+					.75,
+					1.15
+				]
+			].forEach(([e, t, n], r) => {
+				x(s, e, n / 2 + .16, t, .72, n, .85, r % 2 ? 15329243 : 14016728), x(s, e, n + .2, t, .78, .09, .91, 16579312);
+				for (let r = .45; r < n; r += .4) x(s, e, r + .17, t + .433, .5, .12, .012, 8560022);
+			});
+			for (let [e, t] of [
+				[1.8, 1],
+				[1.8, 1.75],
+				[-1.1, 1.75]
+			]) {
+				x(s, e, .35, t, .07, .45, .07, 9017209);
+				let n = new Yr(S, b(7379837));
+				n.position.set(e, .76, t), n.castShadow = !0, s.add(n);
+			}
+			let v = l / 100 * 3;
+			x(s, -1.9, 1.68, -.75, .1, 3, .1, 13227213), x(s, -1.9, v / 2 + .18, -.75, .48, v || .015, .48, d), x(s, -1.9, 1.38, -.75, .72, .04, .72, 3362630);
+			let y = document.createElement("button");
+			y.className = "district-label", y.type = "button", y.dataset.district = r.id, y.setAttribute("aria-label", `${r.name}: ${n} — ${l}. Выбрать район`);
+			let T = document.createElement("span");
+			T.textContent = r.name;
+			let E = document.createElement("strong");
+			E.textContent = String(l), y.append(T, E), y.onclick = () => c.run(i, r.id), e.append(y), c.addCleanup(() => y.remove()), w.push({
+				element: y,
+				position: new K(t, .2, o + 2.15)
+			}), C.push({
+				id: r.id,
+				group: s,
+				border: _,
+				slab: f,
+				label: y
+			});
+		}
+		let T = new Va(), E = Pl();
+		function D() {
+			if (!p) {
+				l.render(u, h), s({
+					position: h.position.toArray(),
+					target: d.target.toArray()
+				});
+				for (let { element: t, position: n } of w) {
+					let r = n.clone().project(h), i = (r.x * .5 + .5) * e.clientWidth, a = (-r.y * .5 + .5) * e.clientHeight;
+					t.style.left = `${i}px`, t.style.top = `${a}px`, t.hidden = r.z > 1 || i < 0 || i > e.clientWidth || a < 0 || a > e.clientHeight;
+				}
 			}
 		}
-	}
-	function w(e) {
-		for (let t of v) {
-			let n = t.id === e;
-			t.border.material.color.setHex(n ? 1261368 : 11650487), t.label.classList.toggle("selected", n), t.label.setAttribute("aria-pressed", String(n));
+		function O(e) {
+			if (!p) {
+				for (let t of C) {
+					let n = t.id === e;
+					t.border.material.color.setHex(n ? 1261368 : 11650487), t.label.classList.toggle("selected", n), t.label.setAttribute("aria-pressed", String(n));
+				}
+				D();
+			}
 		}
-		C();
-	}
-	function T() {
-		let t = e.clientWidth, n = e.clientHeight;
-		t && n && (u.aspect = t / n, c.setSize(t, n, !1), u.fov = t < 500 ? 57 : 42, u.updateProjectionMatrix(), C());
-	}
-	function E(e) {
-		S.start(e);
-	}
-	function D(e) {
-		S.move(e);
-	}
-	function O(e) {
-		S.cancel(e);
-	}
-	function k(e) {
-		if (!S.end(e)) return;
-		let t = c.domElement.getBoundingClientRect();
-		x.setFromCamera(new G((e.clientX - t.left) / t.width * 2 - 1, -(e.clientY - t.top) / t.height * 2 + 1), u);
-		let n = x.intersectObjects(v.map((e) => e.group), !0)[0];
-		if (!n) return;
-		let r = n.object;
-		for (; r && !r.userData.districtId;) r = r.parent;
-		r && i(r.userData.districtId);
-	}
-	function A(e) {
-		e.preventDefault(), a("context_lost");
-	}
-	c.domElement.addEventListener("pointerdown", E), c.domElement.addEventListener("pointermove", D), c.domElement.addEventListener("pointercancel", O), c.domElement.addEventListener("pointerup", k), c.domElement.addEventListener("webglcontextlost", A), d.addEventListener("change", C);
-	let j = new ResizeObserver(T);
-	return j.observe(e), T(), w(r), e.dataset.renderReady = "true", {
-		select: w,
-		reset(e = !1) {
-			d.target.set(0, 0, 0), u.position.fromArray(e ? [
-				0,
-				29,
-				.1
-			] : Il), d.update(), C();
-		},
-		zoom(e) {
-			let t = u.position.clone().sub(d.target);
-			t.setLength(Tt.clamp(t.length() * e, 15, 50)), u.position.copy(d.target).add(t), d.update(), C();
-		},
-		getCamera() {
-			return {
-				position: u.position.toArray(),
-				target: d.target.toArray()
-			};
-		},
-		dispose() {
-			b = !0, j.disconnect(), d.removeEventListener("change", C), d.dispose(), c.domElement.removeEventListener("pointerdown", E), c.domElement.removeEventListener("pointermove", D), c.domElement.removeEventListener("pointercancel", O), c.domElement.removeEventListener("pointerup", k), c.domElement.removeEventListener("webglcontextlost", A);
-			let e = /* @__PURE__ */ new Set(), t = /* @__PURE__ */ new Set();
-			l.traverse((n) => {
-				n.geometry && e.add(n.geometry), n.material && t.add(n.material);
-			}), e.forEach((e) => e.dispose()), t.forEach((e) => e.dispose()), c.dispose(), c.forceContextLoss(), c.domElement.remove(), y.forEach(({ element: e }) => e.remove());
+		function k() {
+			if (p) return;
+			let t = e.clientWidth, n = e.clientHeight;
+			t && n && (h.aspect = t / n, l.setSize(t, n, !1), h.fov = t < 500 ? 57 : 42, h.updateProjectionMatrix(), D());
 		}
-	};
+		function A(e) {
+			E.start(e);
+		}
+		function j(e) {
+			E.move(e);
+		}
+		function ee(e) {
+			E.cancel(e);
+		}
+		function te(e) {
+			if (!E.end(e)) return;
+			let t = l.domElement.getBoundingClientRect();
+			T.setFromCamera(new G((e.clientX - t.left) / t.width * 2 - 1, -(e.clientY - t.top) / t.height * 2 + 1), h);
+			let n = T.intersectObjects(C.map((e) => e.group), !0)[0];
+			if (!n) return;
+			let r = n.object;
+			for (; r && !r.userData.districtId;) r = r.parent;
+			r && i(r.userData.districtId);
+		}
+		function M(e) {
+			e.preventDefault(), c.report("context_lost");
+		}
+		let N = (e) => c.run(A, e), P = (e) => c.run(j, e), ne = (e) => c.run(ee, e), F = (e) => c.run(te, e), re = (e) => c.run(M, e);
+		return c.addCleanup(() => {
+			l.domElement.removeEventListener("pointerdown", N), l.domElement.removeEventListener("pointermove", P), l.domElement.removeEventListener("pointercancel", ne), l.domElement.removeEventListener("pointerup", F), l.domElement.removeEventListener("webglcontextlost", re);
+		}), l.domElement.addEventListener("pointerdown", N), l.domElement.addEventListener("pointermove", P), l.domElement.addEventListener("pointercancel", ne), l.domElement.addEventListener("pointerup", F), l.domElement.addEventListener("webglcontextlost", re), d.addEventListener("change", g), f = new ResizeObserver(() => c.run(k)), c.addCleanup(() => f.disconnect()), f.observe(e), c.run(k), c.run(O, r), e.dataset.renderReady = "true", {
+			select(e) {
+				c.run(O, e);
+			},
+			reset(e = !1) {
+				c.run(() => {
+					d.target.set(0, 0, 0), h.position.fromArray(e ? [
+						0,
+						29,
+						.1
+					] : Ll), d.update(), D();
+				});
+			},
+			zoom(e) {
+				c.run(() => {
+					let t = h.position.clone().sub(d.target);
+					t.setLength(Tt.clamp(t.length() * e, 15, 50)), h.position.copy(d.target).add(t), d.update(), D();
+				});
+			},
+			getCamera() {
+				return c.run(() => ({
+					position: h.position.toArray(),
+					target: d.target.toArray()
+				}));
+			},
+			dispose() {
+				p || (p = !0, c.dispose());
+			}
+		};
+	} catch (e) {
+		throw p = !0, c.dispose(), e;
+	}
 }
 //#endregion
 //#region src/view-state.js
-var Rl = Symbol.for("winx.city3d.view-state");
-function zl(e, t) {
-	let n = e[Rl] ||= /* @__PURE__ */ new Map();
+var zl = Symbol.for("winx.city3d.view-state");
+function Bl(e, t) {
+	let n = e[zl] ||= /* @__PURE__ */ new Map();
 	return n.has(t) || (n.size >= 8 && n.delete(n.keys().next().value), n.set(t, {
 		camera: null,
 		error: null
 	})), n.get(t);
 }
 //#endregion
+//#region src/protocol.js
+var Vl = [
+	"T1",
+	"T2",
+	"E1",
+	"E2",
+	"S1",
+	"S2",
+	"B1",
+	"B2",
+	"C1",
+	"C2"
+], Hl = [
+	"esil",
+	"almaty",
+	"saryarka",
+	"baikonur",
+	"nura"
+], Ul = [
+	"baseline",
+	"A",
+	"B"
+], Wl = (e) => typeof e == "object" && !!e && !Array.isArray(e), Gl = (e) => typeof e == "number" && Number.isFinite(e);
+function Kl(e) {
+	if (!Wl(e) || e.schema_version !== 1) return "unsupported_schema";
+	if (!Array.isArray(e.states) || !e.states.length || typeof e.diff_only != "boolean" || !Vl.includes(e.selected_indicator) || e.selected_district !== null && !Hl.includes(e.selected_district)) return "render_failed";
+	let t = -1, n = [];
+	for (let r of e.states) {
+		if (!Wl(r)) return "render_failed";
+		let e = Ul.indexOf(r.id);
+		if (e <= t || e < 0 || typeof r.label != "string" || r.is_baseline !== (r.id === "baseline") || !Gl(r.score) || !Number.isInteger(r.cost) || r.cost < 0 || !Number.isInteger(r.remaining_budget) || r.remaining_budget < 0 || !Array.isArray(r.decisions) || r.decisions.length !== (r.is_baseline ? 0 : 5) || !Array.isArray(r.districts) || r.districts.length !== 5 || !Wl(r.district_scores)) return "render_failed";
+		let i = /* @__PURE__ */ new Set();
+		for (let e of r.districts) {
+			if (!Wl(e) || !Hl.includes(e.id) || i.has(e.id) || typeof e.name != "string" || !Wl(e.indicators) || Object.keys(e.indicators).length !== 10 || !Gl(r.district_scores[e.id]) || Vl.some((t) => !Gl(e.indicators[t]) || e.indicators[t] < 0 || e.indicators[t] > 100)) return "render_failed";
+			i.add(e.id);
+		}
+		let a = /* @__PURE__ */ new Set();
+		for (let e of r.decisions) {
+			if (!Wl(e) || typeof e.measure_id != "string" || !e.measure_id || a.has(e.measure_id) || e.district_id !== null && !Hl.includes(e.district_id)) return "render_failed";
+			a.add(e.measure_id);
+		}
+		t = e, n.push(r.id);
+	}
+	return n.includes("B") && !n.includes("A") || e.diff_only && !(n.includes("A") && n.includes("B")) ? "render_failed" : null;
+}
+//#endregion
 //#region src/main.js
-var Bl = {
+var ql = {
 	T1: "Разгрузка дорог",
 	T2: "Общественный транспорт",
 	E1: "Озеленение",
@@ -12063,74 +12200,98 @@ function $(e, t, n) {
 	let r = document.createElement(e);
 	return r.className = t, n !== void 0 && (r.textContent = n), r;
 }
-function Vl({ parentElement: e, data: t, key: n, setStateValue: r }) {
-	let i = e.querySelector(".city-root"), a = zl(window, t.view_key || n);
+function Jl({ parentElement: e, data: t, key: n, setStateValue: r }) {
+	let i = e.querySelector(".city-root"), a = Bl(window, t?.view_key || n);
 	i.replaceChildren();
-	let o = t.states[0], s = t.selected_indicator, c = t.selected_district || o.districts[0].id, l = null, u = !1, d = $("header", "city-header"), f = $("div", "city-title-block");
-	f.append($("span", "city-eyebrow", "АСТАНА / ЛАБОРАТОРИЯ РЕШЕНИЙ"), $("h3", "", "Город, который можно понять")), d.append(f, $("span", "city-badge", "Исходное состояние"));
-	let p = $("div", "city-layout"), m = $("div", "map-column"), h = $("div", "city-viewport"), g = $("div", "map-tag", `${s} · ${Bl[s]}`);
-	h.append(g);
-	let _ = $("div", "camera-controls"), v = [
-		["Общий вид", () => l?.reset()],
-		["Сверху", () => l?.reset(!0)],
-		["+", () => l?.zoom(.82)],
-		["−", () => l?.zoom(1.22)]
-	], y = [];
-	for (let [e, t] of v) {
+	let o = Kl(t);
+	if (o) return i.append($("p", "city-caption", "Сцена не может прочитать данные. Показатели доступны в таблице под макетом.")), i.dataset.stateId = "", a.error !== o && r("render_error", { code: o }), a.error = o, a.protocolError = !0, () => i.replaceChildren();
+	a.protocolError && (a.protocolError = !1, a.error = null, r("render_error", null));
+	let s = t.states[0];
+	i.dataset.stateId = s.id;
+	let c = t.selected_indicator, l = t.selected_district, u = null, d = !1, f = null, p = $("header", "city-header"), m = $("div", "city-title-block");
+	m.append($("span", "city-eyebrow", "АСТАНА / ЛАБОРАТОРИЯ РЕШЕНИЙ"), $("h3", "", "Город, который можно понять")), p.append(m, $("span", "city-badge", s.label));
+	let h = $("div", "city-layout"), g = $("div", "map-column"), _ = $("div", "city-viewport"), v = $("div", "map-tag", `${c} · ${ql[c]}`);
+	_.append(v);
+	let y = $("div", "camera-controls"), b = [
+		["Общий вид", () => u?.reset()],
+		["Сверху", () => u?.reset(!0)],
+		["+", () => u?.zoom(.82)],
+		["−", () => u?.zoom(1.22)]
+	], x = [];
+	for (let [e, t] of b) {
 		let n = $("button", "", e);
-		n.type = "button", e === "+" && n.setAttribute("aria-label", "Приблизить"), e === "−" && n.setAttribute("aria-label", "Отдалить"), n.onclick = t, _.append(n), y.push(n);
+		n.type = "button", e === "+" && n.setAttribute("aria-label", "Приблизить"), e === "−" && n.setAttribute("aria-label", "Отдалить"), n.onclick = t, y.append(n), x.push(n);
 	}
-	h.append(_);
-	let b = $("div", "city-legend");
-	b.append($("span", "legend-alert", "● Ниже 40"), $("span", "legend-normal", "● 40–100"), $("span", "legend-scale", "Высота столбца: 0–100 · риска: 40"));
-	let x = $("div", "district-navigation");
-	x.setAttribute("aria-label", "Выбор района");
-	let S = $("aside", "city-detail");
-	S.setAttribute("aria-live", "polite");
-	let C = /* @__PURE__ */ new Map();
-	function w() {
-		let e = o.districts.find((e) => e.id === c), t = e.indicators[s];
-		S.replaceChildren(), S.append($("span", "city-eyebrow", "ВЫБРАННЫЙ РАЙОН"), $("h3", "district-heading", e.name)), S.append($("p", "indicator-title", `${s} · ${Bl[s]}`));
+	_.append(y);
+	let S = $("div", "city-legend");
+	S.append($("span", "legend-alert", "● Ниже 40"), $("span", "legend-normal", "● 40–100"), $("span", "legend-scale", "Высота столбца: 0–100 · риска: 40"));
+	let C = $("div", "district-navigation");
+	C.setAttribute("aria-label", "Выбор района");
+	let w = $("aside", "city-detail");
+	w.setAttribute("aria-live", "polite");
+	let T = /* @__PURE__ */ new Map();
+	function E() {
+		w.replaceChildren();
+		for (let [e, t] of T) t.setAttribute("aria-pressed", String(e === l));
+		if (l === null) {
+			w.append($("span", "city-eyebrow", s.label), $("h3", "district-heading", "Все районы")), w.append($("p", "indicator-title", `${c} · ${ql[c]}`));
+			for (let e of s.districts) {
+				let t = e.indicators[c], n = $("div", `district-score ${t < 40 ? "is-critical" : ""}`);
+				n.append($("span", "", e.name), $("strong", "", String(t))), w.append(n);
+			}
+			w.append($("p", "detail-footnote", `Score города: ${s.score.toFixed(4)}. Выберите район для всех десяти показателей.`));
+			return;
+		}
+		let e = s.districts.find((e) => e.id === l), t = e.indicators[c];
+		w.append($("span", "city-eyebrow", "ВЫБРАННЫЙ РАЙОН"), $("h3", "district-heading", e.name)), w.append($("p", "indicator-title", `${c} · ${ql[c]}`));
 		let n = $("div", `indicator-value ${t < 40 ? "is-critical" : ""}`);
-		n.append($("strong", "", String(t)), $("span", "", "/ 100")), S.append(n, $("p", `indicator-status ${t < 40 ? "is-critical" : ""}`, t < 40 ? "Ниже критического порога 40" : "Не ниже критического порога 40"));
+		n.append($("strong", "", String(t)), $("span", "", "/ 100")), w.append(n, $("p", `indicator-status ${t < 40 ? "is-critical" : ""}`, t < 40 ? "Ниже критического порога 40" : "Не ниже критического порога 40"));
 		let r = $("div", "district-score");
-		r.append($("span", "", "Районный балл"), $("strong", "", o.district_scores[e.id].toFixed(4))), S.append(r, $("div", "detail-label", "Все показатели района"));
+		r.append($("span", "", "Районный балл"), $("strong", "", s.district_scores[e.id].toFixed(4))), w.append(r, $("div", "detail-label", "Все показатели района"));
 		let i = $("div", "indicator-grid");
 		for (let [t, n] of Object.entries(e.indicators)) {
-			let e = $("div", `indicator-cell ${n < 40 ? "is-critical" : ""} ${t === s ? "active" : ""}`);
-			e.title = Bl[t], e.append($("span", "", t), $("strong", "", String(n))), i.append(e);
+			let e = $("div", `indicator-cell ${n < 40 ? "is-critical" : ""} ${t === c ? "active" : ""}`);
+			e.title = ql[t], e.append($("span", "", t), $("strong", "", String(n))), i.append(e);
 		}
-		S.append(i, $("p", "detail-footnote", "Числа взяты из расчётной модели. Здания и расположение районов — условные."));
-		for (let [e, t] of C) t.setAttribute("aria-pressed", String(e === c));
+		w.append(i, $("p", "detail-footnote", "Числа взяты из расчётной модели. Здания и расположение районов — условные."));
 	}
-	function T(e) {
-		if (!o.districts.some((t) => t.id === e)) return;
-		let t = c !== e;
-		c = e, l?.select(e), w(), t && r("district_selected", { district_id: e });
+	function D(e) {
+		if (e !== null && !s.districts.some((t) => t.id === e)) return;
+		let t = l !== e;
+		l = e, u?.select(e), E(), t && r("district_selected", { district_id: e });
 	}
-	for (let e of o.districts) {
+	let O = $("button", "", "Все районы");
+	O.type = "button", O.onclick = () => D(null), T.set(null, O), C.append(O);
+	for (let e of s.districts) {
 		let t = $("button", "", e.name);
-		t.type = "button", t.onclick = () => T(e.id), C.set(e.id, t), x.append(t);
+		t.type = "button", t.onclick = () => D(e.id), T.set(e.id, t), C.append(t);
 	}
-	m.append(h, b, x), p.append(m, S), i.append(d, p, $("p", "city-caption", "Условный 3D-макет · перетаскивайте для вращения, колесо или два пальца — масштаб. Это не географическая карта.")), w();
-	function E(e) {
-		if (u) return;
-		u = !0, l && (a.camera = l.getCamera()), l?.dispose(), l = null, h.dataset.renderReady = "false", y.forEach((e) => {
+	g.append(_, S, C), h.append(g, w), i.append(p, h, $("p", "city-caption", "Условный 3D-макет · перетаскивайте для вращения, колесо или два пальца — масштаб. Это не географическая карта.")), E();
+	function k(e) {
+		if (d) return;
+		d = !0, u && (a.camera = u.getCamera()), u?.dispose(), u = null, _.dataset.renderReady = "false", x.forEach((e) => {
 			e.disabled = !0;
-		});
-		let t = $("div", "city-fallback");
-		t.setAttribute("role", "status"), t.append($("strong", "", "3D недоступно в этом браузере"), $("p", "", "Выбор района и все показатели доступны ниже. Для повторной попытки перезагрузите страницу.")), h.append(t), a.error || (a.error = e, r("render_error", { code: e }));
+		}), f = $("div", "city-fallback"), f.setAttribute("role", "status"), f.append($("strong", "", "3D временно недоступно"), $("p", "", "Выбор района и все показатели доступны ниже. Сохранённый план не изменён."));
+		let t = $("button", "retry-scene", "Повторить 3D");
+		t.type = "button", t.onclick = () => {
+			a.error = null, d = !1, f?.remove(), f = null, x.forEach((e) => {
+				e.disabled = !1;
+			}), r("render_error", null), A();
+		}, f.append(t), _.append(f), a.error !== e && (a.error = e, r("render_error", { code: e }));
 	}
-	try {
-		a.error ? E(a.error) : l = Ll(h, o, s, c, T, E, a.camera, (e) => {
-			a.camera = e;
-		});
-	} catch {
-		E("webgl_unavailable");
+	function A() {
+		try {
+			let e = Rl(_, s, c, l, D, k, a.camera, (e) => {
+				a.camera = e;
+			});
+			d ? (e.dispose(), _.dataset.renderReady = "false") : u = e;
+		} catch (e) {
+			k(e?.code === "WEBGL_UNAVAILABLE" ? "webgl_unavailable" : "render_failed");
+		}
 	}
-	return () => {
-		l && (a.camera = l.getCamera()), l?.dispose(), i.replaceChildren();
+	return a.error ? k(a.error) : A(), () => {
+		u && (a.camera = u.getCamera()), u?.dispose(), i.replaceChildren();
 	};
 }
 //#endregion
-export { Vl as default };
+export { Jl as default };

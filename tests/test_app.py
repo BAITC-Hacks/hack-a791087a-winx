@@ -127,5 +127,45 @@ class ApplicationSmokeTest(unittest.TestCase):
         self.assertFalse(any('OLD_EXPLANATION' in m.value for m in app.markdown))
         self.assertTrue(any(d.measure_id == 'M7' and d.district_id == 'esil' for d in app.session_state['scenario_state'].plan_a.decisions))
 
+    def test_scene_switches_saved_a_and_baseline_without_using_draft(self):
+        with patch('components.city3d.render_city', return_value={}) as scene:
+            app = self.open_app()
+            self.assertEqual(scene.call_args.args[0]['states'][0]['id'], 'baseline')
+            app = self.reference(app)
+            app.button(key='calculate').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.radio(key='scene_state').value, 'A')
+            saved_payload = deepcopy(scene.call_args.args[0])
+            snapshot = saved_payload['states'][0]
+            self.assertEqual(snapshot['id'], 'A')
+            self.assertEqual(snapshot['score'], app.session_state['scenario_state'].plan_a.after.score)
+            nura = next(d for d in snapshot['districts'] if d['id'] == 'nura')
+            self.assertEqual((nura['indicators']['S1'], nura['indicators']['S2']), (48, 43.75))
+            app.selectbox(key='measure_0').set_value('M3').run()
+            self.assertEqual(scene.call_args.args[0], saved_payload)
+            app.radio(key='scene_state').set_value('baseline').run()
+            self.assertEqual(scene.call_args.args[0]['states'][0]['id'], 'baseline')
+            nura = next(d for d in scene.call_args.args[0]['states'][0]['districts'] if d['id'] == 'nura')
+            self.assertEqual(nura['indicators']['S1'], 38)
+            app.radio(key='scene_state').set_value('A').run()
+            self.assertEqual(scene.call_args.args[0], saved_payload)
+
+    def test_scene_clear_and_context_error_keep_data_available(self):
+        with patch('components.city3d.render_city', return_value={}) as scene:
+            app = self.reference(self.open_app())
+            app.button(key='calculate').click().run()
+            saved = deepcopy(app.session_state['scenario_state'].plan_a)
+            scene.return_value = {'district_selected': {'district_id': None}, 'render_error': {'code': 'context_lost'}}
+            app.run()
+            self.assertFalse(app.exception)
+            self.assertIsNone(app.session_state['selected_city_district'])
+            self.assertEqual(app.session_state['scenario_state'].plan_a, saved)
+            self.assertTrue(any('Все районы' in item.value for item in app.caption))
+            self.assertTrue(any('контекст' in item.value.lower() for item in app.warning))
+            table = next(item.value for item in app.dataframe if 'Значение на сцене' in item.value.columns)
+            self.assertEqual(len(table), 5)
+            self.assertEqual(table.loc[table['Район'] == 'Нура', 'Значение на сцене'].iloc[0], 48)
+
+
 if __name__ == '__main__':
     unittest.main()

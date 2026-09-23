@@ -13,7 +13,7 @@ from components.city3d import render_city
 from ui.forms import render_decisions
 from ui.labels import DIRECTIONS, INDICATORS
 from ui.results import render_result
-from ui.scene import build_scene_payload, validate_district_selection
+from ui.scene import build_scene_payload
 from ui.state import ScenarioState, draft_matches_saved, save_a, set_draft
 
 ROOT = Path(__file__).resolve().parent
@@ -63,6 +63,7 @@ if calculate and validation.valid:
         validation = error.validation
     else:
         state = save_a(state, computed)
+        st.session_state.scene_state = 'A'
         st.session_state.pop('plan_explanation', None)
         st.session_state.pop('plan_review', None)
         st.success('План A рассчитан и сохранён.')
@@ -97,22 +98,48 @@ with st.expander(f'Каталог мер · {len(dataset.measures)}'):
     ], hide_index=True, width='stretch')
 
 st.divider()
-st.subheader('Исходный город в 3D')
-st.caption('Макет показывает состояние до мер. После расчёта последствия выбранных решений доступны в паспорте плана A выше.')
+st.subheader('Город в 3D')
+st.caption('Сравните исходный город с сохранённым планом A. Изменения черновика попадут на макет после расчёта.')
+scene_states = {'baseline': baseline}
+if state.plan_a is not None:
+    scene_states['A'] = state.plan_a
+scene_labels = {'baseline': 'Исходное состояние', 'A': 'Сохранённый план A'}
+if st.session_state.get('scene_state') not in scene_states:
+    st.session_state.scene_state = 'baseline'
+scene_id = st.radio('Состояние города', list(scene_states),
+                    format_func=scene_labels.get, horizontal=True, key='scene_state')
+scene_result = scene_states[scene_id]
 indicator = st.selectbox(
     'Показатель на 3D-макете', list(INDICATORS), index=4,
     format_func=lambda code: f'{code} · {INDICATORS[code]}', key='scene_indicator',
 )
 st.session_state.setdefault('selected_city_district', 'nura')
-payload = build_scene_payload(dataset, baseline, selected_indicator=indicator,
+payload = build_scene_payload(dataset, {scene_id: scene_result}, selected_indicator=indicator,
                               selected_district=st.session_state.selected_city_district)
 event = render_city(payload)
-if event is not None:
-    selected = validate_district_selection(event.district_selected, dataset)
-    if selected and selected != st.session_state.selected_city_district:
+if event.get('district_selected') is not None:
+    selected = event['district_selected']['district_id']
+    if selected != st.session_state.selected_city_district:
         st.session_state.selected_city_district = selected
         st.rerun()
-st.caption(f'Выбран район: {district_names[st.session_state.selected_city_district]}. Все числа в сцене — из расчётного движка.')
+render_error = event.get('render_error')
+if render_error:
+    error_messages = {
+        'webgl_unavailable': 'Браузер не смог запустить WebGL.',
+        'context_lost': 'Потерян графический контекст 3D.',
+        'render_failed': 'Не удалось отрисовать 3D-макет.',
+        'unsupported_schema': 'Версия данных сцены не поддерживается.',
+    }
+    st.warning(f"{error_messages[render_error['code']]} Показатели выбранного состояния доступны в таблице ниже.")
+selected_name = district_names.get(st.session_state.selected_city_district, 'Все районы')
+st.caption(f'{scene_labels[scene_id]} · {selected_name}. Все числа в сцене — из расчётного движка.')
+with st.expander('Показатели сцены — таблица', expanded=bool(render_error)):
+    st.dataframe([
+        {'Район': district.name, 'Показатель': f'{indicator} · {INDICATORS[indicator]}',
+         'Значение на сцене': district.indicators[indicator],
+         'Районный балл': scene_result.after.district_scores[district.id]}
+        for district in scene_result.districts_after
+    ], hide_index=True, width='stretch')
 
 with st.expander('Районы: базовое состояние'):
     st.dataframe([

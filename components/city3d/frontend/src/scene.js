@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTapTracker } from './tap.js';
+import { createSceneLifecycle } from './lifecycle.js';
 
 const LAYOUT = {
   saryarka: [-5.8, -3.3], baikonur: [0, -3.3], almaty: [5.8, -3.3],
@@ -10,18 +11,50 @@ const HOME = [17, 20, 23];
 
 // Building shapes and positions are schematic; only bars encode data.
 export function createScene(viewport, state, indicator, selectedId, onSelect, onError, savedCamera, onCameraChange) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const lifecycle = createSceneLifecycle(onError);
+  let renderer;
+  let scene;
+  let controls;
+  let observer;
+  let disposed = false;
+  try {
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  } catch {
+    const error = new Error('WebGL is unavailable');
+    error.code = 'WEBGL_UNAVAILABLE';
+    throw error;
+  }
+  lifecycle.addCleanup(() => {
+    try { renderer.forceContextLoss(); } finally {
+      try { renderer.dispose(); } finally { renderer.domElement.remove(); }
+    }
+  });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
   renderer.setClearColor(0xe9eee7, 1);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.setAttribute('aria-label', '3D-макет. Выбор района также доступен кнопками под сценой.');
   viewport.prepend(renderer.domElement);
-  const scene = new THREE.Scene();
+  scene = new THREE.Scene();
+  const geometries = new Set();
+  const allMaterials = new Set();
+  lifecycle.addCleanup(() => {
+    scene.traverse(object => {
+      if (object.geometry) geometries.add(object.geometry);
+      if (object.material) allMaterials.add(object.material);
+    });
+    geometries.forEach(item => item.dispose());
+    allMaterials.forEach(item => item.dispose());
+  });
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 140);
   camera.position.fromArray(HOME);
-  const controls = new OrbitControls(camera, renderer.domElement);
+  controls = new OrbitControls(camera, renderer.domElement);
+  lifecycle.addCleanup(() => {
+    try { controls.removeEventListener('change', controlsChanged); }
+    finally { controls.dispose(); }
+  });
   controls.target.set(0, 0, 0);
   controls.minDistance = 15;
   controls.maxDistance = 50;
@@ -29,6 +62,7 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
   controls.maxPolarAngle = Math.PI / 2.25;
   controls.enablePan = false;
   controls.enableDamping = false;
+  function controlsChanged() { lifecycle.run(render); }
   if (savedCamera?.position?.length === 3 && savedCamera?.target?.length === 3) {
     camera.position.fromArray(savedCamera.position);
     controls.target.fromArray(savedCamera.target);
@@ -43,9 +77,14 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
   sunlight.shadow.normalBias = 0.04;
   scene.add(sunlight);
   const geometry = new THREE.BoxGeometry(1, 1, 1);
+  geometries.add(geometry);
   const materials = new Map();
   function material(color) {
-    if (!materials.has(color)) materials.set(color, new THREE.MeshStandardMaterial({ color, roughness: 0.83 }));
+    if (!materials.has(color)) {
+      const value = new THREE.MeshStandardMaterial({ color, roughness: 0.83 });
+      materials.set(color, value);
+      allMaterials.add(value);
+    }
     return materials.get(color);
   }
   function box(parent, x, y, z, width, height, depth, color) {
@@ -61,6 +100,7 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
   box(scene, 0, -0.12, -0.1, 17.9, 0.08, 0.7, 0xb7c4bc);
   for (let x = -8; x < 9; x += 1.1) box(scene, x, -0.065, -0.1, 0.45, 0.015, 0.04, 0xf9fbf6);
   const treeGeometry = new THREE.IcosahedronGeometry(0.36, 0);
+  geometries.add(treeGeometry);
   const districts = [];
   const labels = [];
   for (const district of state.districts) {
@@ -72,10 +112,13 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
     const value = district.indicators[indicator];
     const color = value < 40 ? 0xc46c3d : new THREE.Color(0x91c5ae).lerp(new THREE.Color(0x246856), value / 100).getHex();
     const slab = box(group, 0, 0, 0, 5.15, 0.28, 4.7, 0xf4f3e9);
-    const border = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(5.25, 0.32, 4.8)),
-      new THREE.LineBasicMaterial({ color: 0xb1c5b7 }),
-    );
+    const borderBoxGeometry = new THREE.BoxGeometry(5.25, 0.32, 4.8);
+    geometries.add(borderBoxGeometry);
+    const borderGeometry = new THREE.EdgesGeometry(borderBoxGeometry);
+    geometries.add(borderGeometry);
+    const borderMaterial = new THREE.LineBasicMaterial({ color: 0xb1c5b7 });
+    allMaterials.add(borderMaterial);
+    const border = new THREE.LineSegments(borderGeometry, borderMaterial);
     group.add(border);
     // A fixed cluster per district, not a claim about actual building counts.
     [[-0.6, -0.7, 1.2], [0.55, -0.8, 1.8], [1.5, -0.7, 0.9], [-0.7, 0.8, 0.7], [0.5, 0.75, 1.15]].forEach(([bx, bz, h], i) => {
@@ -105,12 +148,12 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
     const number = document.createElement('strong');
     number.textContent = String(value);
     label.append(name, number);
-    label.onclick = () => onSelect(district.id);
+    label.onclick = () => lifecycle.run(onSelect, district.id);
     viewport.append(label);
+    lifecycle.addCleanup(() => label.remove());
     labels.push({ element: label, position: new THREE.Vector3(x, 0.2, z + 2.15) });
     districts.push({ id: district.id, group, border, slab, label });
   }
-  let disposed = false;
   const raycaster = new THREE.Raycaster();
   const tap = createTapTracker();
   function render() {
@@ -127,6 +170,7 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
     }
   }
   function select(id) {
+    if (disposed) return;
     for (const district of districts) {
       const selected = district.id === id;
       district.border.material.color.setHex(selected ? 0x133f38 : 0xb1c5b7);
@@ -136,6 +180,7 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
     render();
   }
   function resize() {
+    if (disposed) return;
     const width = viewport.clientWidth;
     const height = viewport.clientHeight;
     if (!width || !height) return;
@@ -161,57 +206,61 @@ export function createScene(viewport, state, indicator, selectedId, onSelect, on
   }
   function contextLost(event) {
     event.preventDefault();
-    onError('context_lost');
+    lifecycle.report('context_lost');
   }
-  renderer.domElement.addEventListener('pointerdown', pointerDown);
-  renderer.domElement.addEventListener('pointermove', pointerMove);
-  renderer.domElement.addEventListener('pointercancel', pointerCancel);
-  renderer.domElement.addEventListener('pointerup', pointerUp);
-  renderer.domElement.addEventListener('webglcontextlost', contextLost);
-  controls.addEventListener('change', render);
-  const observer = new ResizeObserver(resize);
+  const guardedPointerDown = event => lifecycle.run(pointerDown, event);
+  const guardedPointerMove = event => lifecycle.run(pointerMove, event);
+  const guardedPointerCancel = event => lifecycle.run(pointerCancel, event);
+  const guardedPointerUp = event => lifecycle.run(pointerUp, event);
+  const guardedContextLost = event => lifecycle.run(contextLost, event);
+  lifecycle.addCleanup(() => {
+    renderer.domElement.removeEventListener('pointerdown', guardedPointerDown);
+    renderer.domElement.removeEventListener('pointermove', guardedPointerMove);
+    renderer.domElement.removeEventListener('pointercancel', guardedPointerCancel);
+    renderer.domElement.removeEventListener('pointerup', guardedPointerUp);
+    renderer.domElement.removeEventListener('webglcontextlost', guardedContextLost);
+  });
+  renderer.domElement.addEventListener('pointerdown', guardedPointerDown);
+  renderer.domElement.addEventListener('pointermove', guardedPointerMove);
+  renderer.domElement.addEventListener('pointercancel', guardedPointerCancel);
+  renderer.domElement.addEventListener('pointerup', guardedPointerUp);
+  renderer.domElement.addEventListener('webglcontextlost', guardedContextLost);
+  controls.addEventListener('change', controlsChanged);
+  observer = new ResizeObserver(() => lifecycle.run(resize));
+  lifecycle.addCleanup(() => observer.disconnect());
   observer.observe(viewport);
-  resize();
-  select(selectedId);
+  lifecycle.run(resize);
+  lifecycle.run(select, selectedId);
   viewport.dataset.renderReady = 'true';
   return {
-    select,
+    select(id) { lifecycle.run(select, id); },
     reset(top = false) {
-      controls.target.set(0, 0, 0);
-      camera.position.fromArray(top ? [0, 29, 0.1] : HOME);
-      controls.update();
-      render();
+      lifecycle.run(() => {
+        controls.target.set(0, 0, 0);
+        camera.position.fromArray(top ? [0, 29, 0.1] : HOME);
+        controls.update();
+        render();
+      });
     },
     zoom(factor) {
-      const offset = camera.position.clone().sub(controls.target);
-      offset.setLength(THREE.MathUtils.clamp(offset.length() * factor, 15, 50));
-      camera.position.copy(controls.target).add(offset);
-      controls.update();
-      render();
-    },
-    getCamera() { return { position: camera.position.toArray(), target: controls.target.toArray() }; },
-    dispose() {
-      disposed = true;
-      observer.disconnect();
-      controls.removeEventListener('change', render);
-      controls.dispose();
-      renderer.domElement.removeEventListener('pointerdown', pointerDown);
-      renderer.domElement.removeEventListener('pointermove', pointerMove);
-      renderer.domElement.removeEventListener('pointercancel', pointerCancel);
-      renderer.domElement.removeEventListener('pointerup', pointerUp);
-      renderer.domElement.removeEventListener('webglcontextlost', contextLost);
-      const geometries = new Set();
-      const allMaterials = new Set();
-      scene.traverse(object => {
-        if (object.geometry) geometries.add(object.geometry);
-        if (object.material) allMaterials.add(object.material);
+      lifecycle.run(() => {
+        const offset = camera.position.clone().sub(controls.target);
+        offset.setLength(THREE.MathUtils.clamp(offset.length() * factor, 15, 50));
+        camera.position.copy(controls.target).add(offset);
+        controls.update();
+        render();
       });
-      geometries.forEach(item => item.dispose());
-      allMaterials.forEach(item => item.dispose());
-      renderer.dispose();
-      renderer.forceContextLoss();
-      renderer.domElement.remove();
-      labels.forEach(({ element }) => element.remove());
+    },
+    getCamera() { return lifecycle.run(() => ({ position: camera.position.toArray(), target: controls.target.toArray() })); },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      lifecycle.dispose();
     },
   };
+  } catch (error) {
+    disposed = true;
+    lifecycle.dispose();
+    throw error;
+  }
 }
