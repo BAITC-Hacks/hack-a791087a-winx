@@ -1,7 +1,7 @@
 # @AaaDddmyrza — состояние
 
 ## Сейчас
-V1 готов в codex/scene-v1 от ff82455 (main); последний коммит: git log -1.
+V1: da77274 в codex/scene-v1; получен A2 backend d5e0e47 из main.
 Git email: adildaulet2005@gmail.com; зона app/ui/AI/3D.
 
 ## Сделано
@@ -12,7 +12,7 @@ components/city3d: schema, null-выбор, сохранение камеры, c
 Локальный JS/CSS-bundle пересобран. README/PLAN/HANDOFF актуализированы.
 
 ## Не закончено
-A2 backend у @alikhan; UI ревизора и V2 A/B/различия ещё не подключены.
+A2 backend готов у @alikhan; UI ревизора и V2 A/B/различия ещё не подключены.
 Платный live API и физический pinch на телефоне не проверены.
 Текст статуса V1 в API.md требует правки владельцем, запрос в HANDOFF.
 
@@ -28,11 +28,11 @@ Python выбирает один снимок baseline/A по C0; JS не счи
 .env.example содержит пользовательские локальные правки; не включать в V1-коммит.
 
 ## Проверка
-python run.py --check: 130 Python; frontend npm test: 11 JS; npm run build.
+python run.py --check: 155 Python; frontend npm test: 11 JS; npm run build.
 Chromium: Нура baseline 38/35, A 48/43.75; камера и выбор JS→Python.
 Стенд bundle: context_lost, webgl_unavailable, schema, retry; CSP только localhost.
 Узкая ширина: приложение760, компонент iframe390; подробнее README компонента.
 Локальный demo: http://127.0.0.1:8514; обычный запуск python run.py.
 
 ## Следующий шаг
-После готовности A2 backend подключить UI review_scenario с явным принятием B.
+Подключить готовый review_scenario к UI с явным принятием B.

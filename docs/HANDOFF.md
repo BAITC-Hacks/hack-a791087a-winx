@@ -1,6 +1,25 @@
 # Передача работы
 
-## Актуальная сводка после объединения PR #2 — 23 сентября 2026
+## A2 backend готов — 23 сентября 2026
+
+@AaaDddmyrza: доступен `citysim.reviewer.review_scenario(source, dataset, constraints,
+*, demo_mode=True, api_key=None, model=None) -> (ReviewResult, Explanation)`.
+Сигнатура сохранена, общие типы не менялись. Подробности — в [API.md](API.md).
+Demo использует S1 без SDK; live — максимум 2×10, все числа из engine. Ошибки AI
+дают локальный fallback с warning и сохранением checks/best; общий deadline — 35 с.
+Explanation сравнивает A→B, включая отрицательные изменения; третьего AI-запроса нет.
+Проверка: 144 Python-теста (25 A2), 4 JS-теста, запуск HTTP 200; реальный SDK с
+HTTP MockTransport дал 2 запроса/20 checks и тот же результат, что S1.
+Платные вызовы не выполнялись. UI/3D-файлы оставлены владельцу V1.
+
+| Кому | Следующий шаг | Что учесть |
+|---|---|---|
+| @AaaDddmyrza | Завершить V1, затем UI A2 | Явная кнопка вызывает reviewer; показать status, outcome, warning, checks и best; новый A/constraints сбрасывает старую ревизию |
+| @AaaDddmyrza | Применение B и V2 | Применять B только действием пользователя; incomplete может содержать improved; сравнивать с исходным A |
+| @AaaDddmyrza | При подключении обновить README/IDEA | Backend уже готов, UI ревизора ещё нет; mode=openai означает источник предложений, объяснение детерминированное |
+| @alikhan | Проверить численную интеграцию UI/V2 и запуск R | Backend можно вызывать независимо от готовности сцены |
+
+## Срез после объединения PR #2 — 23 сентября 2026
 
 E1/E2/C0/S1, U1/I1/A1 и V1-P включены в общий main. Ранее открытые запросы
 по завершённым этапам ниже — история передачи. Сохранены результаты обеих сторон:
@@ -11,7 +30,7 @@ E1/E2/C0/S1, U1/I1/A1 и V1-P включены в общий main. Ранее о
 
 | Кому | Следующая задача | Условие / статус |
 |---|---|---|
-| @alikhan | A2 backend: citysim/reviewer.py и tests/test_reviewer.py | S1 и U1/I1/A1 готовы; demo/live оркестрация по API, без правок UI |
+| @alikhan | A2 backend: citysim/reviewer.py и tests/test_reviewer.py | Выполнено; актуальная передача выше |
 | @AaaDddmyrza | V1: baseline/A, версия/события/снятие выбора по C0 | Выполнено в codex/scene-v1; A/B остаётся V2 |
 | @AaaDddmyrza | После V1 и A2 backend подключить UI ревизора, затем V2 | review_scenario возвращает ReviewResult + Explanation; B применяется отдельной кнопкой |
 
@@ -191,3 +210,10 @@ TASK/DATASET/data.py/engine/shared models/API/reviewer не менялись.
 |---|---|---|
 | @alikhan | При следующей правке docs/API.md обновить вводный статус V1: baseline/A, версия, нормализация и null уже реализованы; сигнатуры C0 прежние | Открыт, только текст статуса в чужой зоне |
 | @AaaDddmyrza | Подключить UI A2 после готовности review_scenario, затем V2 | Следующий пакет; серверный A2 не включён в V1 |
+
+### Совместимость V1 и A2 backend
+
+Получен `d5e0e47` из main и объединён с V1 `da77274`. Конфликты были только
+в PLAN/HANDOFF/NEXT_PARALLEL_STEPS; сохранены завершённые статусы обоих пакетов.
+Продуктовый код объединился автоматически. Общий check: 155 Python-тестов OK;
+JS — 11 OK. UI ревизора остаётся следующим этапом, review_scenario уже доступен.
