@@ -12,6 +12,11 @@ DIRECTIONS = {
     "safety": "Безопасность", "services": "Городские услуги",
 }
 
+MODE_LABELS = {
+    "demo": "локально без внешнего API",
+    "openai": "с помощью OpenAI",
+}
+
 LAYERS = {
     'transport': ('T1', 'T2'), 'ecology': ('E1', 'E2'), 'social': ('S1', 'S2'),
     'safety': ('B1', 'B2'), 'services': ('C1', 'C2'),

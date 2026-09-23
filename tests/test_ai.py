@@ -1,11 +1,12 @@
 """Offline guarantees and SDK fallback; never makes an actual API call."""
 
 import unittest
+from dataclasses import asdict, replace
 from unittest.mock import patch
 
 from openai import OpenAIError
 
-from citysim.ai import explain_result
+from citysim.ai import _explanation_payload, explain_result
 from citysim.data import load_dataset
 from citysim.engine import baseline, simulate
 from citysim.models import Decision
@@ -61,12 +62,12 @@ class ExplanationTests(unittest.TestCase):
         self.assertIn("остаток бюджета 5", explanation.text)
         self.assertIn("52.5577", explanation.text)
         self.assertIn("56.5431", explanation.text)
-        self.assertIn("Ncrit: 2 → 0", explanation.text)
-        self.assertIn("Нура — S1", explanation.text)
-        self.assertIn("Нура — S2", explanation.text)
+        self.assertIn("Число показателей ниже 40 (Ncrit): 2 → 0", explanation.text)
+        self.assertIn("Нура — школы и детсады", explanation.text)
+        self.assertIn("Нура — поликлиники и первичная медпомощь", explanation.text)
         self.assertIn("+10.0000", explanation.text)
         self.assertIn("Сарыарка", explanation.text)
-        self.assertIn("указаны до ограничения", explanation.text)
+        self.assertIn("Изменения показывают фактическое значение после мер", explanation.text)
         self.assertNotIn("линейный вклад", explanation.text)
         self.assertNotIn("оптимальн", explanation.text.lower())
 
@@ -80,9 +81,9 @@ class ExplanationTests(unittest.TestCase):
         explanation = explain_result(result)
 
         self.assertIn("M11", explanation.text)
-        self.assertIn("T1", explanation.text)
+        self.assertIn("разгрузка дорог", explanation.text)
         self.assertIn("-1.7500", explanation.text)
-        self.assertIn("указаны до ограничения", explanation.text)
+        self.assertIn("Среди учтённых эффектов есть отрицательные", explanation.text)
 
     @patch("openai.OpenAI")
     def test_live_request_uses_exact_result_json_and_existing_client_configuration(self, client):
@@ -90,11 +91,11 @@ class ExplanationTests(unittest.TestCase):
         import json
 
         result = simulate((
-            Decision("M9", "nura"), Decision("M11", "nura"),
+            Decision("M7", "nura"), Decision("M8", "nura"),
             Decision("M10", "nura"), Decision("M12"),
-            Decision("M4", "saryarka"),
+            Decision("M5", "saryarka"),
         ), load_dataset())
-        original = json.dumps(asdict(result), ensure_ascii=False)
+        original = json.loads(json.dumps(asdict(result), ensure_ascii=False))
         client.return_value.responses.create.return_value.status = "completed"
         client.return_value.responses.create.return_value.output_text = "Факты по сценарию."
 
@@ -103,12 +104,59 @@ class ExplanationTests(unittest.TestCase):
         self.assertEqual(explanation.mode, "openai")
         client.assert_called_once_with(api_key="test-only", timeout=15, max_retries=0)
         kwargs = client.return_value.responses.create.call_args.kwargs
-        self.assertEqual(kwargs["input"], original)
-        self.assertEqual(json.dumps(json.loads(kwargs["input"]), ensure_ascii=False), original)
+        payload = json.loads(kwargs["input"])
+        for field, value in original.items():
+            self.assertEqual(payload[field], value)
+        self.assertEqual(payload["districts_before"][4]["indicators"]["S1"], 38)
+        self.assertEqual(payload["districts_before"][4]["indicators"]["S2"], 35)
+        self.assertEqual(len(payload["critical_indicators_before"]), 2)
+        self.assertEqual(payload["critical_indicators_after"], [])
+        self.assertEqual(
+            {(row["district_id"], row["indicator"], row["value"])
+             for row in payload["critical_indicators_before"]},
+            {("nura", "S1", 38), ("nura", "S2", 35)},
+        )
+        self.assertEqual(payload["indicator_names"]["S1"], "школы и детсады")
+        self.assertEqual(payload["measure_names"]["M7"], "школа + детсад")
         self.assertEqual(kwargs["store"], False)
         self.assertEqual(kwargs["max_output_tokens"], 700)
         self.assertNotIn("reasoning", kwargs)
-        self.assertEqual(json.dumps(asdict(result), ensure_ascii=False), original)
+        self.assertEqual(json.loads(json.dumps(asdict(result), ensure_ascii=False)), original)
+
+    def test_live_explanation_context_preserves_baseline_values(self):
+        import json
+
+        payload = json.loads(json.dumps(_explanation_payload(self.result), ensure_ascii=False))
+        raw_result = json.loads(json.dumps(asdict(self.result), ensure_ascii=False))
+        for field, value in raw_result.items():
+            self.assertEqual(payload[field], value)
+        self.assertEqual(payload["districts_before"], [
+            {"id": district.id, "name": district.name,
+             "indicators": district.indicators}
+            for district in self.result.districts_after
+        ])
+        self.assertEqual(len(payload["critical_indicators_before"]), 2)
+        self.assertEqual(payload["critical_indicators_before"], payload["critical_indicators_after"])
+        self.assertEqual(json.loads(json.dumps(payload, ensure_ascii=False)), payload)
+
+    def test_live_explanation_context_reconstructs_a_clipped_indicator(self):
+        dataset = load_dataset()
+        districts = tuple(
+            replace(district, indicators={**district.indicators, "T1": 98})
+            if district.id == "esil" else district
+            for district in dataset.districts
+        )
+        dataset = replace(dataset, districts=districts)
+        result = simulate((
+            Decision("M2"), Decision("M4", "saryarka"),
+            Decision("M7", "nura"), Decision("M10", "almaty"),
+            Decision("M12"),
+        ), dataset)
+
+        payload = _explanation_payload(result)
+
+        self.assertEqual(payload["districts_before"][0]["indicators"]["T1"], 98)
+        self.assertEqual(result.districts_after[0].indicators["T1"], 100)
 
     def test_luna_request_uses_no_reasoning_and_larger_explanation_budget(self):
         for model in ("gpt-6-luna", "test-model", "gpt-4.1", "gpt-6-astra"):

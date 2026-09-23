@@ -3,15 +3,16 @@ import streamlit as st
 
 from citysim.models import Dataset, SimulationResult
 from citysim.review_models import ReviewResult
-from ui.labels import INDICATORS
+from ui.labels import INDICATORS, MODE_LABELS
 from ui.state import ScenarioState
 
 
 def build_comparison(a: SimulationResult, b: SimulationResult, dataset: Dataset) -> dict:
     values_a = {d.id: d.indicators for d in a.districts_after}
     values_b = {d.id: d.indicators for d in b.districts_after}
-    city_values = [('Стоимость', a.cost, b.cost), ('Остаток бюджета', a.remaining_budget, b.remaining_budget),
-                   ('Score', a.after.score, b.after.score), ('Ncrit', a.after.n_crit, b.after.n_crit)]
+    city_values = [('Потрачено из 100', a.cost, b.cost), ('Останется', a.remaining_budget, b.remaining_budget),
+                   ('Общий балл города', a.after.score, b.after.score),
+                   ('Пар «район и показатель» ниже 40', a.after.n_crit, b.after.n_crit)]
     return {
         'city': [{'Показатель': label, 'A': av, 'B': bv, 'B − A': bv-av} for label,av,bv in city_values],
         'districts': [
@@ -26,10 +27,11 @@ def build_comparison(a: SimulationResult, b: SimulationResult, dataset: Dataset)
 
 def review_summary(review: ReviewResult) -> dict:
     return {
-        'status': 'Проверка не завершена — показан лучший из уже проверенных вариантов'
-                  if review.status == 'incomplete' else 'Ограниченная проверка завершена',
-        'outcome': {'improved': 'Найдено улучшение Score', 'cheaper_equal': 'Найден более дешёвый план при равном Score',
-                    'unchanged': 'В проверенных вариантах улучшений нет'}[review.outcome],
+        'status': 'Проверка остановилась раньше срока. Ниже лучший уже проверенный вариант.'
+                  if review.status == 'incomplete' else 'Проверка выбранных вариантов завершена.',
+        'outcome': {'improved': 'У одного из проверенных вариантов общий балл выше',
+                    'cheaper_equal': 'Есть вариант дешевле при почти таком же общем балле',
+                    'unchanged': 'Среди проверенных вариантов подходящего улучшения нет'}[review.outcome],
         'checked': len(review.checks),
     }
 
@@ -52,14 +54,16 @@ def render_review_result(state: ScenarioState, dataset: Dataset) -> None:
         summary = review_summary(state.review)
         (st.warning if state.review.status == 'incomplete' else st.info)(summary['status'])
         (st.info if state.review.outcome == 'unchanged' else st.success)(summary['outcome'])
-        st.caption(f"Проверено вариантов: {summary['checked']} из не более 20. Полный перебор не выполнялся.")
+        st.caption(f"Проверено вариантов: {summary['checked']} из максимум 20. Это ограниченный поиск, он не гарантирует лучший вариант из всех возможных.")
         if state.review_explanation is not None:
             explanation = state.review_explanation
-            st.caption('Источник предложений: OpenAI' if explanation.mode == 'openai' else 'Источник предложений: demo — локальный поиск')
+            source = ('резервный локальный поиск; ранее проверенные предложения OpenAI сохранены, если были'
+                      if explanation.mode == 'demo' and explanation.warning else MODE_LABELS[explanation.mode])
+            st.caption(f"Как искали варианты: {source}.")
             st.markdown(explanation.text)
             if explanation.warning:
                 st.warning(explanation.warning)
-        with st.expander('Журнал проверенных вариантов'):
+        with st.expander('Подробности проверки вариантов'):
             rows = build_review_log(state.review, dataset)
             if rows:
                 st.dataframe(rows, hide_index=True, width='stretch')
@@ -67,9 +71,9 @@ def render_review_result(state: ScenarioState, dataset: Dataset) -> None:
                 st.caption('При этих ограничениях новые варианты не проверялись.')
     if state.plan_b is None or state.plan_a is None:
         return
-    st.subheader('Сравнение сохранённых планов A и B')
-    st.caption('B — предложение ревизора; A ещё не изменён.' if state.review is not None
-               else 'B рассчитан из черновика вручную; A ещё не изменён.')
+    st.subheader('Сравнение плана A и варианта B')
+    st.caption('B предложен автоматической проверкой; A пока сохранён отдельно.' if state.review is not None
+               else 'B рассчитан из текущего черновика; A пока сохранён отдельно.')
     comparison = build_comparison(state.plan_a, state.plan_b, dataset)
     st.dataframe(comparison['city'], hide_index=True, width='stretch')
     st.dataframe(comparison['districts'], hide_index=True, width='stretch')
@@ -82,11 +86,11 @@ def render_review_result(state: ScenarioState, dataset: Dataset) -> None:
         for label,result,other in [('A',state.plan_a,state.plan_b),('B',state.plan_b,state.plan_a)]
         for d in result.decisions
     ], hide_index=True, width='stretch')
-    with st.expander('Все показатели A/B и ухудшения'):
+    declines = [row for row in comparison['indicators'] if row['B − A'] < 0]
+    if declines:
+        st.warning('В варианте B снизятся отдельные показатели: ' + '; '.join(
+            f"{r['Район']} — {r['Показатель']}: {r['A']:g} → {r['B']:g}" for r in declines))
+    else:
+        st.caption('Ни один показатель в B не ниже соответствующего значения A.')
+    with st.expander('Все показатели и возможные ухудшения'):
         st.dataframe(comparison['indicators'], hide_index=True, width='stretch')
-        declines = [row for row in comparison['indicators'] if row['B − A'] < 0]
-        if declines:
-            st.warning('В B есть ухудшения отдельных показателей: ' + '; '.join(
-                f"{r['Район']} {r['Код']}: {r['A']:g} → {r['B']:g}" for r in declines))
-        else:
-            st.caption('В B нет показателей ниже соответствующих значений A.')

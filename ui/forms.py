@@ -3,7 +3,7 @@
 import streamlit as st
 
 from citysim.models import Dataset, Decision
-from ui.labels import DIRECTIONS
+from ui.labels import DIRECTIONS, INDICATORS
 
 
 REFERENCE = (
@@ -19,12 +19,22 @@ def _load_reference() -> None:
 
 
 def render_decisions(dataset: Dataset) -> tuple[Decision, ...]:
-    st.subheader("1. Соберите пять решений")
-    st.caption("Бюджет 100 · без повторов · не более двух мер одного направления. Покрывать все пять направлений не обязательно.")
-    st.button("Заполнить пример из задания", key="load_reference", on_click=_load_reference,
-              help="Заполняет только черновик. Нажмите «Рассчитать и сохранить A», чтобы получить результат.")
+    st.subheader("1. Выберите пять мер")
+    st.caption(f"На все решения дано {dataset.budget} условных единиц. Выберите пять разных мер; из одного направления можно взять не больше двух.")
+    st.button("Подставить пример из задания", key="load_reference", on_click=_load_reference,
+              help="Подставляет готовый пример в пять полей. Это ещё не расчёт и не меняет сохранённый план A.")
     measures = {measure.id: measure for measure in dataset.measures}
     districts = {district.id: district.name for district in dataset.districts}
+    # Old session values can remain after a slot is cleared or its option disappears.
+    # Clear invalid values before constructing selectboxes so Streamlit never sees
+    # a value that is absent from that widget's options.
+    choices = [st.session_state.get(f"measure_{i}") for i in range(5)]
+    seen = set()
+    for index, value in enumerate(choices):
+        if value is not None and (value not in measures or value in seen):
+            st.session_state[f"measure_{index}"] = None
+        elif value is not None:
+            seen.add(value)
     choices = [st.session_state.get(f"measure_{i}") for i in range(5)]
     decisions = []
     for index in range(5):
@@ -34,13 +44,15 @@ def render_decisions(dataset: Dataset) -> tuple[Decision, ...]:
         with measure_column:
             measure_id = st.selectbox(
                 f"Решение {index + 1} · мера", available, key=f"measure_{index}",
-                format_func=lambda mid: "Выберите меру" if mid is None else f"{mid} · {measures[mid].name} · {measures[mid].cost}",
+                format_func=lambda mid: "Выберите меру" if mid is None else f"{measures[mid].name} · {measures[mid].cost} ед.",
             )
         if measure_id is None:
             with district_column:
                 st.caption("Сначала выберите меру")
             continue
         measure = measures[measure_id]
+        if measure.scope == "district" and st.session_state.get(f"district_{index}") not in districts:
+            st.session_state[f"district_{index}"] = None
         with district_column:
             if measure.scope == "district":
                 district_id = st.selectbox(
@@ -51,6 +63,13 @@ def render_decisions(dataset: Dataset) -> tuple[Decision, ...]:
             else:
                 district_id = None
                 st.caption("Весь город · выбор района не требуется")
-        measure_column.caption(f"{DIRECTIONS[measure.direction]} · лаг {measure.lag} кв.")
+        effect_names = [f"{name.lower()} {'↑' if measure.effects[code] > 0 else '↓'}"
+                        for code, name in INDICATORS.items() if code in measure.effects]
+        effect_text = ", ".join(effect_names) if effect_names else "—"
+        scope_text = "весь город" if measure.scope == "city" else "один выбранный район"
+        measure_column.caption(
+            f"{DIRECTIONS[measure.direction]} · охват: {scope_text} · цена: {measure.cost} из {dataset.budget} ед. "
+            f"Работает с {measure.lag}-го кв. Затрагивает (↑ улучшение, ↓ ухудшение): {effect_text}."
+        )
         decisions.append(Decision(measure_id, district_id))
     return tuple(decisions)

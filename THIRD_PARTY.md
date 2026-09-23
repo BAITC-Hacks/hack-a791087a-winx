@@ -25,6 +25,9 @@
 | Субагент gpt-6-luna | https://openai.com/ | Условия OpenAI | Независимое чтение ТЗ, создание части скелета, сохранение сценариев, объяснения и аудит математики/AI/UI; payload и lifecycle V1, состояние A/B и сравнение V2 |
 | Субагент gpt-6-astra | https://openai.com/ | Условия OpenAI | Независимое ревью 3D-прототипа, жизненного цикла и интеграции U1/I1/A1/V1/A2 UI/V2 |
 | Скилл subagent-models | Локальный `.codex/skills/subagent-models/SKILL.md` | Пользовательский скилл; лицензия не указана | Выбор модели и effort субагентов |
+| Скилл frontend-design | Локальный `.agents/skills/frontend-design/SKILL.md` | См. LICENSE.txt скилла | Читаемые названия показателей и раскрываемая панель 3D при финальной полировке |
+| Скилл playwright / Playwright CLI | https://github.com/microsoft/playwright-cli | Apache-2.0 | Подготовка браузерной проверки; запуск системного Chrome ограничен политикой компьютера |
+| Codex Computer Use | https://openai.com/codex/ | Условия OpenAI | Браузерная приёмка в браузере приложения Codex |
 | Скилл OpenAI Docs | https://github.com/openai/skills | См. лицензию источника | Проверка документации SDK |
 | Скилл openai-platform-api-key | Локальный плагин openai-developers, skills/openai-platform-api-key | См. лицензию плагина | Проверка наличия ключа без вывода значения; правила подключения существующего ключа |
 | Документация OpenAI по ключам и расходам | https://developers.openai.com/api/docs/guides/production-best-practices ; https://developers.openai.com/api/docs/guides/spend-limits | Документация OpenAI | Безопасная серверная конфигурация и различие уведомлений/лимитов расходов |

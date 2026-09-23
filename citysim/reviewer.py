@@ -12,6 +12,7 @@ import json
 from time import monotonic
 from typing import Literal
 
+from citysim.labels import indicator_name, measure_name
 from citysim.models import Dataset, Decision, Explanation, SimulationResult
 from citysim.review_models import (
     MAX_CANDIDATES_PER_ROUND, MAX_REVIEW_CANDIDATES, MAX_REVIEW_ROUNDS,
@@ -220,8 +221,8 @@ def _finish(
 ) -> tuple[ReviewResult, Explanation]:
     a, b = review.source, review.best
     summary = {
-        "improved": "Найден вариант с более высоким Score.",
-        "cheaper_equal": "Найден более дешёвый вариант с равным Score в пределах допуска.",
+        "improved": "Найден вариант с более высоким итоговым баллом.",
+        "cheaper_equal": "Найден более дешёвый вариант с тем же итоговым баллом в пределах допуска.",
         "unchanged": "В проверенных вариантах улучшений нет; сохранён план A.",
     }[review.outcome]
     completion = ("Ограниченная проверка завершена." if review.status == "completed_limited"
@@ -229,13 +230,16 @@ def _finish(
     names = {district.id: district.name for district in a.districts_after}
 
     def describe(decisions: tuple[Decision, ...]) -> str:
-        return "; ".join(f"{d.measure_id} / {names.get(d.district_id, 'город')}" for d in decisions) or "нет"
+        return "; ".join(
+            f"{d.measure_id} ({measure_name(d.measure_id)}) / {names.get(d.district_id, 'город')}"
+            for d in decisions
+        ) or "нет"
 
     removed = tuple(d for d in a.decisions if d not in b.decisions)
     added = tuple(d for d in b.decisions if d not in a.decisions)
     before = {d.id: d for d in a.districts_after}
     negative = [
-        f"{d.name} — {indicator}: {before[d.id].indicators[indicator]:.4f} → {value:.4f} "
+        f"{d.name} — {indicator_name(indicator)}: {before[d.id].indicators[indicator]:.4f} → {value:.4f} "
         f"({value - before[d.id].indicators[indicator]:+.4f})"
         for d in b.districts_after for indicator, value in d.indicators.items()
         if value < before[d.id].indicators[indicator]
@@ -246,13 +250,13 @@ def _finish(
                   else "Использован локальный режим проверки.")
     text = (
         f"{completion} {summary}\n\n"
-        f"Сравнение A → B: Score {a.after.score:.6f} → {b.after.score:.6f}; "
+        f"Сравнение A → B: итоговый балл (Score) {a.after.score:.6f} → {b.after.score:.6f}; "
         f"изменение относительно A {b.after.score - a.after.score:+.10f}. "
         f"Стоимость {a.cost} → {b.cost} (изменение {b.cost - a.cost:+d}); "
         f"остаток бюджета {a.remaining_budget} → {b.remaining_budget}. "
-        f"Ncrit: {a.after.n_crit} → {b.after.n_crit}.\n\n"
-        f"Убрано: {describe(removed)}. Добавлено: {describe(added)}. "
-        f"Ухудшения показателей относительно A: {'; '.join(negative) if negative else 'нет'}.\n\n"
+        f"показателей ниже 40 (Ncrit): {a.after.n_crit} → {b.after.n_crit}.\n\n"
+        f"Убраны меры: {describe(removed)}. Добавлены меры: {describe(added)}. "
+        f"Показатели, снизившиеся относительно A: {'; '.join(negative) if negative else 'нет'}.\n\n"
         f"Проверено уникальных альтернатив: {checked}; допустимых: {checked - rejected}; "
         f"отклонено: {rejected}. {provenance} Объяснение составлено из результатов движка. "
         "Это лучший из проверенных вариантов, полный перебор не выполнялся. "

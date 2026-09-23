@@ -5,9 +5,9 @@ import { compareStates, getChangedDistrictIds } from './comparison.js';
 import './style.css';
 
 const TITLES = {
-  T1: 'Разгрузка дорог', T2: 'Общественный транспорт', E1: 'Озеленение', E2: 'Качество воздуха',
-  S1: 'Школы и детсады', S2: 'Первичная медпомощь', B1: 'Безопасность улиц',
-  B2: 'Безопасность движения', C1: 'Надёжность ЖКХ', C2: 'Решение обращений',
+  T1: 'Разгрузка дорог', T2: 'Доступность общественного транспорта', E1: 'Озеленение', E2: 'Качество воздуха',
+  S1: 'Школы и детсады', S2: 'Поликлиники и первичная медпомощь', B1: 'Безопасность улиц',
+  B2: 'Безопасность дорожного движения', C1: 'Надёжность ЖКХ', C2: 'Скорость решения обращений жителей',
 };
 
 function element(tag, className, text) {
@@ -56,7 +56,7 @@ export default function ({ parentElement, data, key, setStateValue }) {
   let fallback = null;
   const title = element('header', 'city-header');
   const titleBlock = element('div', 'city-title-block');
-  titleBlock.append(element('span', 'city-eyebrow', 'АСТАНА / ЛАБОРАТОРИЯ РЕШЕНИЙ'), element('h3', '', 'Город, который можно понять'));
+  titleBlock.append(element('span', 'city-eyebrow', 'ПЯТЬ РАЙОНОВ · ШКАЛА 0–100'), element('h3', '', 'Как изменится город'));
   title.append(titleBlock, element('span', 'city-badge', state.label));
   const layout = element('div', 'city-layout');
   const mapColumn = element('div', 'map-column');
@@ -86,7 +86,7 @@ export default function ({ parentElement, data, key, setStateValue }) {
   }
   viewport.append(cameraControls);
   const legend = element('div', 'city-legend');
-  legend.append(element('span', 'legend-alert', '● Ниже 40'), element('span', 'legend-normal', '● 40–100'), element('span', 'legend-scale', 'Высота столбца: 0–100 · риска: 40'));
+  legend.append(element('span', 'legend-alert', '● Ниже 40 — проблема'), element('span', 'legend-normal', '● От 40 — выше порога'), element('span', 'legend-scale', 'Выше столбец — лучше показатель. Отметка: 40.'));
   const navigation = element('div', 'district-navigation');
   navigation.setAttribute('aria-label', 'Выбор района');
   const detail = element('aside', 'city-detail');
@@ -116,7 +116,7 @@ export default function ({ parentElement, data, key, setStateValue }) {
         row.append(name, scoreBlock);
         detail.append(row);
       }
-      detail.append(element('p', 'detail-footnote', `Score города: ${state.score.toFixed(4)}. Выберите район для всех десяти показателей.`));
+      detail.append(element('p', 'detail-footnote', `Итоговый балл города: ${state.score.toFixed(4)}. Нажмите на район, чтобы увидеть его показатели.`));
       return;
     }
     const district = state.districts.find(item => item.id === selectedId);
@@ -125,21 +125,23 @@ export default function ({ parentElement, data, key, setStateValue }) {
     detail.append(element('p', 'indicator-title', `${indicator} · ${TITLES[indicator]}`));
     const valueLine = element('div', `indicator-value ${value < 40 ? 'is-critical' : ''}`);
     valueLine.append(element('strong', '', String(value)), element('span', '', '/ 100'));
-    detail.append(valueLine, element('p', `indicator-status ${value < 40 ? 'is-critical' : ''}`, value < 40 ? 'Ниже критического порога 40' : 'Не ниже критического порога 40'));
+    detail.append(valueLine, element('p', `indicator-status ${value < 40 ? 'is-critical' : ''}`, value < 40 ? 'Требует внимания: значение ниже 40' : 'Критический порог пройден: значение не ниже 40'));
     const selectedChange = comparison?.[district.id]?.indicators[indicator];
     if (selectedChange) {
       const comparisonBlock = element('div', 'selected-comparison');
-      comparisonBlock.append(element('span', 'detail-label', 'Сравнение A → B'), element('strong', '', changeLabel(selectedChange)));
+      comparisonBlock.append(element('span', 'detail-label', 'Ваш план A → альтернатива B'), element('strong', '', changeLabel(selectedChange)));
       detail.append(comparisonBlock);
     }
     const score = element('div', 'district-score');
-    score.append(element('span', '', 'Районный балл'), element('strong', '', state.district_scores[district.id].toFixed(4)));
-    detail.append(score, element('div', 'detail-label', 'Все показатели района'));
+    score.append(element('span', '', 'Общий балл района'), element('strong', '', state.district_scores[district.id].toFixed(4)));
+    const allIndicators = element('details', 'all-indicators');
+    allIndicators.append(element('summary', '', 'Все 10 показателей района'));
+    detail.append(score, allIndicators);
     const indicators = element('div', 'indicator-grid');
     for (const [id, number] of Object.entries(district.indicators)) {
       const cell = element('div', `indicator-cell ${number < 40 ? 'is-critical' : ''} ${id === indicator ? 'active' : ''}`);
       cell.title = TITLES[id];
-      cell.append(element('span', '', id), element('strong', '', String(number)));
+      cell.append(element('span', 'indicator-name', `${id} · ${TITLES[id]}`), element('strong', '', String(number)));
       const change = comparison?.[district.id]?.indicators[id];
       if (change) {
         const delta = change.delta > 0 ? `+${change.delta}` : String(change.delta);
@@ -147,9 +149,10 @@ export default function ({ parentElement, data, key, setStateValue }) {
       }
       indicators.append(cell);
     }
-    detail.append(indicators, element('p', 'detail-footnote', comparison
-      ? 'В ячейках показаны A, B и Δ B−A. Текущее значение, статус и балл относятся к выбранному плану. Здания и расположение районов — условные.'
-      : 'Числа взяты из расчётной модели. Здания и расположение районов — условные.'));
+    allIndicators.append(indicators);
+    detail.append(element('p', 'detail-footnote', comparison
+      ? 'A — ваш план, B — альтернатива. Δ — разница B минус A: плюс означает улучшение, минус — ухудшение. Крупное число относится к выбранному плану.'
+      : 'Все показатели: от 0 до 100, больше — лучше. Значение ниже 40 считается проблемой и снижает итоговый балл города.'));
   }
   function select(id) {
     if (id !== null && !state.districts.some(district => district.id === id)) return;
@@ -173,7 +176,7 @@ export default function ({ parentElement, data, key, setStateValue }) {
   }
   mapColumn.append(viewport, legend, navigation);
   layout.append(mapColumn, detail);
-  host.append(title, layout, element('p', 'city-caption', 'Условный 3D-макет · перетаскивайте для вращения, колесо или два пальца — масштаб. Это не географическая карта.'));
+  host.append(title, layout, element('p', 'city-caption', 'Нажмите на район или его кнопку, чтобы открыть показатели. Перетаскивайте для вращения, используйте +/− для масштаба. Данные показывают столбцы; здания и расположение районов условные.'));
   updateDetails();
 
   function onError(code) {

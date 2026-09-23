@@ -40,13 +40,16 @@
 .district-score { padding: 17px 0; border-top: 1px solid #e0e5da; border-bottom: 1px solid #e0e5da; display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
 .district-score strong { font-variant-numeric: tabular-nums; }
 .detail-label { font-size: 11px; color: #617969; margin: 20px 0 10px; }
-.indicator-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-.indicator-cell { display: flex; flex-direction: column; gap: 4px; align-items: center; padding: 8px 0; border-radius: 5px; background: #eff2e9; font-size: 11px; border: 1px solid transparent; }
-.indicator-cell span { font-size: 9px; }
+.all-indicators { margin-top: 20px; }
+.all-indicators summary { cursor: pointer; font-size: 12px; font-weight: 600; padding: 8px 0; }
+.all-indicators summary:focus-visible { outline: 3px solid #134d40; outline-offset: 3px; }
+.indicator-grid { display: grid; grid-template-columns: 1fr; gap: 5px; margin-top: 8px; }
+.indicator-cell { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; padding: 8px; border-radius: 5px; background: #eff2e9; font-size: 12px; border: 1px solid transparent; }
+.indicator-cell span { font-size: 11px; line-height: 1.4; }
 .indicator-cell.is-critical { background: #f9e9da; }
 .indicator-cell.active { border-color: #618675; }
 .comparison-line { display: block; color: #577364; font-size: 9px; line-height: 1.35; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.indicator-comparison { white-space: pre-line; font-size: 8px; }
+.indicator-comparison { grid-column: 1 / -1; white-space: normal; font-size: 10px; }
 .district-overview-row { align-items: flex-start; }
 .overview-value { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; text-align: right; }
 .selected-comparison { display: flex; flex-direction: column; gap: 5px; margin: -12px 0 20px; padding: 12px 0; border-top: 1px solid #e0e5da; border-bottom: 1px solid #e0e5da; font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -64,7 +67,7 @@
   .city-viewport { height: 410px; }
   .city-detail { border-left: 0; border-top: 1px solid #d5dfd4; padding: 20px; }
   .city-root .district-heading { margin-bottom: 15px; }
-  .indicator-grid { grid-template-columns: repeat(10, 1fr); }
+  .indicator-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .legend-scale { margin-left: 0; }
   .district-navigation button { min-height: 42px; }
   .city-caption { padding: 12px 17px; }
@@ -72,9 +75,9 @@
 @media (max-width: 430px) {
   .city-header { flex-direction: column; gap: 10px; }
   .city-viewport { height: 365px; }
-  .indicator-grid { grid-template-columns: repeat(5, 1fr); }
+  .indicator-grid { grid-template-columns: 1fr; }
   .map-tag { font-size: 11px; left: 10px; top: 12px; }
-  .district-label { font-size: 10px !important; padding: 4px; gap: 4px; }
-  .district-label strong { font-size: 11px; padding-left: 4px; }
+  .district-label { flex-direction: column; font-size: 9px !important; padding: 3px; gap: 1px; }
+  .district-label strong { font-size: 11px; padding-left: 0; border-left: 0; }
   .camera-controls { right: 10px; bottom: 10px; }
 }

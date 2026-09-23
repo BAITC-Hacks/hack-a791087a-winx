@@ -8,6 +8,7 @@ from typing import Any
 
 from citysim.engine import validate_scenario
 from citysim.models import Dataset, ScoreResult, SimulationResult
+from ui.labels import INDICATORS
 from citysim.review_models import (
     SCENE_SCHEMA_VERSION,
     SceneEvents,
@@ -32,12 +33,15 @@ def build_scene_details(result: SimulationResult, dataset: Dataset, indicator: s
     return {
         'measures': [
             {'Код': d.measure_id, 'Мера': measures[d.measure_id].name,
-             'Где': names.get(d.district_id, 'Весь город'), 'Лаг, кварталы': measures[d.measure_id].lag}
+             'Где': names.get(d.district_id, 'Весь город'), 'Задержка, кварталы': measures[d.measure_id].lag}
             for d in result.decisions if indicator in measures[d.measure_id].effects
             and (district_id is None or d.district_id in (None, district_id))],
         'effects': [
-            {'Источник': e.source, 'Район': names[e.district_id], 'Показатель': e.indicator,
-             'Эффект до ограничения 0–100': e.delta}
+            {'Источник': e.source,
+             'Мера или сочетание': ' + '.join(measures[mid].name if mid in measures else mid
+                                            for mid in e.source.split('+')),
+             'Район': names[e.district_id], 'Показатель': f'{e.indicator} · {INDICATORS[e.indicator]}',
+             'Изменение до ограничения 0–100': e.delta}
             for e in result.effects if e.indicator == indicator
             and (district_id is None or e.district_id == district_id)],
     }

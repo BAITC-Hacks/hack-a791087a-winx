@@ -24,7 +24,26 @@ load_dotenv(ROOT / '.env', override=False)
 
 
 def _demo_enabled() -> bool:
-    return os.getenv('DEMO_MODE', '1').strip().lower() not in {'0', 'false', 'no', 'off'}
+    mode = os.getenv('DEMO_MODE', 'auto').strip().lower()
+    if mode in {'0', 'false', 'no', 'off'}:
+        return False
+    if mode == 'auto':
+        return not (os.getenv('OPENAI_API_KEY', '').strip() and
+                    os.getenv('OPENAI_MODEL', '').strip())
+    return True
+
+
+def _mode_caption() -> str:
+    mode = os.getenv('DEMO_MODE', 'auto').strip().lower()
+    model = os.getenv('OPENAI_MODEL', '').strip()
+    configured = bool(os.getenv('OPENAI_API_KEY', '').strip() and model)
+    if mode == 'auto' and not configured:
+        return 'OpenAI не настроен. Сейчас работает локальный режим; настройте ключ и модель по README, чтобы включить OpenAI.'
+    if mode in {'1', 'true', 'yes', 'on'} or (mode not in {'auto', '0', 'false', 'no', 'off'}):
+        return 'Демонстрационный режим включён: ответы готовятся локально, OpenAI не вызывается.'
+    if not configured:
+        return 'OpenAI включён настройкой, но ключ или модель не заданы. При запросе появится локальный ответ с предупреждением.'
+    return f'OpenAI настроен · модель {model}. Запрос отправится только после нажатия соответствующей кнопки; при сбое появится локальный ответ.'
 
 
 def _explain(result):
@@ -33,10 +52,11 @@ def _explain(result):
 
 
 def _show_explanation(explanation):
-    st.caption(f'Режим объяснения: {explanation.mode}')
-    st.markdown(explanation.text)
+    st.caption('Ответ ИИ получен от OpenAI.' if explanation.mode == 'openai'
+               else 'Локальное объяснение по правилам модели города.')
     if explanation.warning:
         st.warning(explanation.warning)
+    st.markdown(explanation.text)
 
 
 def _reset_review_controls():
@@ -55,27 +75,31 @@ def _accept_b():
     st.session_state.pop('plan_explanation', None)
     st.session_state.pop('plan_review', None)
     st.session_state.scene_state = 'A'
-    st.session_state.plan_notice = 'План B принят как новый A. Черновик обновлён, прежняя ревизия очищена.'
+    st.session_state.plan_notice = 'Вариант B стал планом A. Черновик обновлён, прежнее сравнение удалено.'
 
 
 def _keep_a():
     st.session_state.scenario_state = keep_a(st.session_state.scenario_state)
     st.session_state.scene_state = 'A'
     st.session_state.scene_diff_only = False
-    st.session_state.plan_notice = 'План A оставлен. Предложение B удалено; черновик сохранён.'
+    st.session_state.plan_notice = 'План A оставлен. Вариант B удалён, текущий черновик сохранён.'
 
 
 st.set_page_config(page_title='Аким на 5 часов', page_icon='🏙️', layout='wide')
 st.title('Аким на 5 часов')
-st.caption('Пять решений для города · выберите меры, рассчитайте последствия и сохраните свой план')
+st.markdown('''Вы распределяете общий бюджет **100 условных единиц** между пятью городскими мерами. Расчёт оценивает состояние города через **8 кварталов (2 года)**.
+
+**Как пройти сценарий:** выберите меры или подставьте пример → рассчитайте план A → прочитайте изменения и объяснение → при желании создайте вариант B и сравните его с A. Каждый расчёт показывает модельную оценку, а не обещание реального эффекта.''')
+st.info('**A** — ваш сохранённый план. **B** — вариант для сравнения; он заменит A, только если вы сами выберете действие «Сделать B новым планом A».')
 dataset = load_dataset()
 baseline = engine.baseline(dataset)
 district_names = {district.id: district.name for district in dataset.districts}
 
 budget, score, critical = st.columns(3)
-budget.metric('Доступный бюджет', dataset.budget)
-score.metric('Базовый Score', f'{baseline.after.score:.4f}')
-critical.metric('Ncrit исходного города', baseline.after.n_crit, help='Число пар район/показатель со значением ниже 40')
+budget.metric('Бюджет на пять мер', dataset.budget)
+score.metric('Общий балл исходного города', f'{baseline.after.score:.4f}', help='Формула: 70% среднего балла с учётом долей населения районов + 30% балла самого слабого района − 1 балл за каждую пару «район и показатель» ниже 40.')
+critical.metric('Значений ниже 40', baseline.after.n_crit, help='Считаются пары «район и показатель». В исходных данных оба таких значения находятся в Нуре.')
+st.caption(_mode_caption())
 
 st.session_state.setdefault('scenario_state', ScenarioState())
 if notice := st.session_state.pop('plan_notice', None):
@@ -84,13 +108,14 @@ decisions = render_decisions(dataset)
 state = set_draft(st.session_state.scenario_state, decisions)
 validation = engine.validate_scenario(decisions, dataset)
 draft_cost, draft_remaining = st.columns(2)
-draft_cost.metric('Стоимость черновика', validation.cost)
-draft_remaining.metric('Остаток по черновику', dataset.budget - validation.cost)
+draft_cost.metric('Цена выбранных мер', validation.cost)
+draft_remaining.metric('Останется из бюджета', dataset.budget - validation.cost)
 calculate_column, compare_column = st.columns(2)
-calculate = calculate_column.button('Рассчитать и сохранить A', type='primary', key='calculate')
-calculate_b = compare_column.button('Рассчитать черновик как B', key='save_manual_b',
+calculate = calculate_column.button('Рассчитать и сохранить план A', type='primary', key='calculate',
+                                    help='Считает текущие пять решений. Новый расчёт заменит прежний A и удалит связанный вариант B и проверку.')
+calculate_b = compare_column.button('Рассчитать текущий выбор как B', key='save_manual_b',
                                    disabled=state.plan_a is None,
-                                   help='Сохраняет альтернативу для сравнения; план A остаётся прежним.')
+                                   help='Сохраняет текущий черновик как альтернативу для сравнения. Сохранённый план A останется прежним.')
 if (calculate or calculate_b) and validation.valid:
     try:
         computed = engine.simulate(decisions, dataset)
@@ -103,49 +128,53 @@ if (calculate or calculate_b) and validation.valid:
             st.session_state.scene_state = 'A'
             st.session_state.pop('plan_explanation', None)
             st.session_state.pop('plan_review', None)
-            st.success('План A рассчитан и сохранён.')
+            st.success('План A рассчитан и сохранён. Предыдущие B и проверка удалены.')
         else:
             state = save_b(state, computed)
             st.session_state.scene_state = 'B'
-            st.success('План B рассчитан из черновика. План A сохранён без изменений.')
+            st.success('Вариант B рассчитан из текущего выбора. План A остался без изменений.')
 st.session_state.scenario_state = state
 if validation.valid:
-    st.caption('Набор прошёл проверку правил. Расчёт выполняется по кнопке.')
+    st.caption('Пять мер и правила бюджета проверены. Новый результат появится после нажатия кнопки расчёта.')
 elif decisions or calculate or calculate_b:
     for issue in validation.errors:
         st.error(issue.message)
 else:
-    st.info('Выберите пять мер и районы для районных мер или начните с примера из задания.')
+    st.info('Выберите пять мер и район для каждой районной меры или начните с готового примера.')
 
 if state.plan_a is not None:
     st.divider()
     if not draft_matches_saved(state):
-        st.warning('Черновик изменён. Ниже сохранённый план A и объяснение именно этого плана. Чтобы обновить результат, рассчитайте черновик заново.')
+        st.warning('Вы изменили выбор. Ниже показан прежний сохранённый план A. Чтобы увидеть результат нового выбора, рассчитайте и сохраните его.')
     render_result(state.plan_a, dataset)
-    st.subheader('3. Объяснение плана A')
-    st.caption('Объяснение относится к сохранённым решениям. Числа в паспорте берутся из движка.')
-    if st.button('Объяснить сохранённый план A', key='explain_plan'):
+    st.subheader('3. Разберите результат плана A')
+    st.caption('Объяснение относится к сохранённому A. Все числовые результаты рассчитаны по модели города.')
+    if st.button('Показать объяснение результата', key='explain_plan',
+                 help='В локальном режиме ответ готовится без API. В режиме OpenAI будет отправлен отдельный запрос; при сбое появится локальное объяснение.'):
         with st.spinner('Готовим объяснение сохранённого плана…'):
             st.session_state.plan_explanation = _explain(state.plan_a)
     if st.session_state.get('plan_explanation') is not None:
         _show_explanation(st.session_state.plan_explanation)
 
-    st.subheader('4. Проверка плана и альтернатива B')
-    st.caption('Ревизор проверяет сохранённый A, даже если черновик изменён. Изменение ограничений очищает прежние B и ревизию.')
+    st.subheader('4. Найдите и сравните вариант B')
+    st.caption('Поиск сравнит варианты с сохранённым A, даже если текущий выбор изменён. Изменение условий удалит прежний B и предыдущую проверку.')
     measures = {m.id: m.name for m in dataset.measures}
     decisions_by_id = {d.measure_id: d for d in state.plan_a.decisions}
     locked_ids = st.multiselect(
-        'Какие решения A нельзя менять', list(decisions_by_id), key='review_locked',
-        format_func=lambda mid: f'{mid} · {measures[mid]} · {district_names.get(decisions_by_id[mid].district_id, "Весь город")}',
+        'Какие решения A оставить без изменений', list(decisions_by_id), key='review_locked',
+        format_func=lambda mid: f'{measures[mid]} · {district_names.get(decisions_by_id[mid].district_id, "Весь город")}',
     )
     if st.session_state.get('review_max_changes') not in (0, 1):
         st.session_state.review_max_changes = 1
-    max_changes = st.selectbox('Сколько решений разрешено заменить', [0, 1], index=None, key='review_max_changes')
+    max_changes = st.selectbox('Сколько решений можно изменить', [0, 1], index=None, key='review_max_changes',
+                               format_func=lambda count: 'Не менять ни одного' if count == 0 else 'Можно изменить одно')
+    max_changes = max_changes if max_changes in (0, 1) else 1
     constraints = ReviewConstraints(tuple(d for d in state.plan_a.decisions if d.measure_id in locked_ids), max_changes)
     state = set_constraints(state, constraints)
-    st.caption('Режим ревизора: demo — локальный поиск без API.' if _demo_enabled()
-               else 'Режим ревизора: OpenAI — до двух API-запросов по кнопке; при ошибке используется локальный поиск.')
-    if st.button('Проверить план A', key='run_review', type='primary'):
+    st.caption('Поиск вариантов работает локально без обращения к API.' if _demo_enabled()
+               else 'По кнопке отправится до двух запросов OpenAI. При сбое приложение попробует найти варианты локально.')
+    if st.button('Подобрать вариант B для плана A', key='run_review', type='primary',
+                 help='Проверит до 20 вариантов. Найденный B будет только предложен; он станет A, только если вы его примете.'):
         try:
             with st.spinner('Проверяем альтернативы сохранённому A…'):
                 review, explanation = reviewer.review_scenario(
@@ -159,20 +188,22 @@ if state.plan_a is not None:
     render_review_result(state, dataset)
     if state.plan_b is not None:
         accept_column, keep_column = st.columns(2)
-        accept_column.button('Принять B как новый A', key='accept_b', on_click=_accept_b, type='primary')
-        keep_column.button('Оставить A', key='keep_a', on_click=_keep_a)
+        accept_column.button('Сделать B новым планом A', key='accept_b', on_click=_accept_b, type='primary',
+                             help='Заменит A выбранным B, загрузит его решения в форму и удалит старое сравнение.')
+        keep_column.button('Удалить B и оставить A', key='keep_a', on_click=_keep_a,
+                           help='Удалит вариант B и проверку. План A и текущий черновик сохранятся.')
 
 with st.expander(f'Каталог мер · {len(dataset.measures)}'):
     st.dataframe([
         {'Код': measure.id, 'Мера': measure.name, 'Направление': DIRECTIONS[measure.direction],
          'Охват': 'город' if measure.scope == 'city' else 'район',
-         'Стоимость': measure.cost, 'Лаг': measure.lag}
+         'Стоимость': measure.cost, 'Задержка, кварталы': measure.lag}
         for measure in dataset.measures
     ], hide_index=True, width='stretch')
 
 st.divider()
-st.subheader('Город в 3D')
-st.caption('Переключайте сохранённые A и B или исходный город. Черновик не меняет макет до расчёта.')
+st.subheader('Посмотрите на город')
+st.caption('Выберите исходный город или сохранённый план A/B, затем показатель и направление. Текущий черновик появится здесь только после расчёта.')
 scene_states = {'baseline': baseline}
 if state.plan_a is not None:
     scene_states['A'] = state.plan_a
@@ -181,17 +212,21 @@ if state.plan_b is not None:
 scene_labels = {'baseline': 'Исходное состояние', 'A': 'Сохранённый план A', 'B': 'Предложение B'}
 if st.session_state.get('scene_state') not in scene_states:
     st.session_state.scene_state = 'baseline'
-scene_id = st.radio('Состояние города', list(scene_states), index=None,
+scene_id = st.radio('Что показать', list(scene_states), index=None,
                     format_func=scene_labels.get, horizontal=True, key='scene_state')
+if scene_id not in scene_states:
+    scene_id = 'baseline'
 scene_result = scene_states[scene_id]
-layer = st.radio('Слой города', list(LAYERS), index=2, format_func=DIRECTIONS.get,
+layer = st.radio('Направление', list(LAYERS), index=2, format_func=DIRECTIONS.get,
                  horizontal=True, key='scene_layer')
 if st.session_state.get('scene_indicator') not in LAYERS[layer]:
     st.session_state.scene_indicator = LAYERS[layer][0]
 indicator = st.selectbox(
-    'Показатель на 3D-макете', list(LAYERS[layer]), index=None,
+    'Показатель', list(LAYERS[layer]), index=None,
     format_func=lambda code: f'{code} · {INDICATORS[code]}', key='scene_indicator',
 )
+if indicator not in LAYERS[layer]:
+    indicator = LAYERS[layer][0]
 st.session_state.setdefault('selected_city_district', 'nura')
 can_compare = state.plan_a is not None and state.plan_b is not None and scene_id != 'baseline'
 if not can_compare:

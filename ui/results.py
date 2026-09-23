@@ -47,35 +47,37 @@ def build_passport(result: SimulationResult, dataset: Dataset) -> dict:
 
 def render_result(result: SimulationResult, dataset: Dataset) -> None:
     passport = build_passport(result, dataset)
-    st.subheader("2. Паспорт сохранённого плана A")
-    st.caption("Результат этих пяти решений за 8 кварталов. Числа рассчитаны движком по официальной модели.")
+    st.subheader("2. Что даст план A за 8 кварталов")
+    st.caption("Показаны расчётные изменения за 8 кварталов (2 года). Score — общий балл города: учитывает средний результат с учётом долей населения, слабейший район и показатели ниже 40.")
     cost, remaining, score, critical = st.columns(4)
-    cost.metric("Стоимость плана A", result.cost)
-    remaining.metric("Остаток бюджета A", result.remaining_budget)
-    score.metric("Score плана A", f"{result.after.score:.4f}", f"{result.score_delta:+.4f}")
-    critical.metric("Ncrit плана A", result.after.n_crit)
+    cost.metric("Потрачено из 100", result.cost)
+    remaining.metric("Останется", result.remaining_budget)
+    score.metric("Общий балл Score", f"{result.after.score:.4f}", f"{result.score_delta:+.4f} к исходному")
+    critical.metric("Показателей ниже 40", result.after.n_crit, help="Считаются пары «район и показатель». Чем меньше, тем лучше.")
     st.dataframe(passport["decisions"], hide_index=True, width="stretch", key="saved_decisions")
     st.markdown("**Город: до и после**")
     st.dataframe([
         {"Показатель": "Score", "До": f"{result.before.score:.4f}", "После": f"{result.after.score:.4f}"},
         {"Показатель": "Взвешенный средний балл", "До": f"{result.before.d_avg:.4f}", "После": f"{result.after.d_avg:.4f}"},
         {"Показатель": "Минимальный районный балл", "До": f"{result.before.d_min:.4f}", "После": f"{result.after.d_min:.4f}"},
-        {"Показатель": "Критические показатели (<40)", "До": str(result.before.n_crit), "После": str(result.after.n_crit)},
+        {"Показатель": "Пары «район и показатель» ниже 40", "До": str(result.before.n_crit), "После": str(result.after.n_crit)},
     ], hide_index=True, width="stretch")
-    st.markdown(f"**Самый низкий районный балл после мер:** {passport['weakest_name']} · {result.after.d_min:.4f}")
+    st.markdown(f"**Самый низкий балл среди районов:** {passport['weakest_name']} · {result.after.d_min:.4f}")
     st.dataframe(passport["districts"], hide_index=True, width="stretch", column_config={
         "До": st.column_config.NumberColumn(format="%.4f"), "После": st.column_config.NumberColumn(format="%.4f"),
     })
     if passport["resolved_critical"]:
-        pairs = "; ".join(f"{row['Район']} — {row['Код']}: {row['До']:g} → {row['После']:g}" for row in passport["resolved_critical"])
-        st.success(f"Порог 40 достигнут: {pairs}")
+        pairs = "; ".join(f"{row['Район']} — {row['Показатель']}: {row['До']:g} → {row['После']:g}" for row in passport["resolved_critical"])
+        st.success(f"Эти значения поднялись до 40 или выше: {pairs}")
     if passport["remaining_critical"]:
-        pairs = "; ".join(f"{row['Район']} — {row['Код']}: {row['После']:g}" for row in passport["remaining_critical"])
-        st.warning(f"Остаются показатели ниже 40: {pairs}")
+        pairs = "; ".join(f"{row['Район']} — {row['Показатель']}: {row['После']:g}" for row in passport["remaining_critical"])
+        st.warning(f"Эти значения всё ещё ниже 40: {pairs}")
     else:
-        st.info("После мер показателей ниже 40 нет. Это критерий модели, а не отсутствие всех городских проблем.")
+        st.info("В расчёте не осталось значений ниже 40. Это порог модели, а не утверждение, что в городе нет проблем.")
     with st.expander("Все показатели: до, после и изменение"):
         st.dataframe(passport["indicators"], hide_index=True, width="stretch")
-    with st.expander("Почему изменились показатели: эффекты и синергии"):
-        st.caption("Эффекты учитывают лаг и показаны до ограничения значений диапазоном 0–100 (clip). Фактические изменения — в таблице показателей. Эффект меры не является её отдельным вкладом в Score.")
-        st.dataframe(passport["effects"], hide_index=True, width="stretch")
+    with st.expander("Как меры повлияли на показатели (подробности расчёта)"):
+        st.caption("Эффекты уже учитывают задержку и сочетания мер, но показаны до ограничения итоговых значений диапазоном 0–100. Итоговые изменения смотрите в таблице выше. Эффекты нельзя складывать в отдельные баллы Score.")
+        st.dataframe(passport["effects"], hide_index=True, width="stretch", column_config={
+            "Эффект до clip": st.column_config.NumberColumn("Применённый эффект", help="Уже с учётом задержки; до ограничения показателя диапазоном 0–100."),
+        })

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ApplicationSmokeTest(unittest.TestCase):
     def setUp(self):
-        env = patch.dict(os.environ, {'DEMO_MODE': '1', 'OPENAI_API_KEY': '', 'OPENAI_MODEL': ''})
+        env = patch.dict(os.environ, {'DEMO_MODE': 'auto', 'OPENAI_API_KEY': '', 'OPENAI_MODEL': ''})
         env.start()
         self.addCleanup(env.stop)
         network = patch('openai.OpenAI', side_effect=AssertionError('No API in demo'))
@@ -56,6 +56,44 @@ class ApplicationSmokeTest(unittest.TestCase):
             self.assertEqual(explain.call_count, 1)
             self.assertTrue(any('56.5431' in item.value for item in app.markdown))
 
+    def test_auto_live_explanation_waits_for_button_and_uses_configured_model(self):
+        app = self.reference(self.open_app())
+        with patch.dict(os.environ, {'DEMO_MODE': 'auto', 'OPENAI_API_KEY': 'local-test-key',
+                                     'OPENAI_MODEL': 'gpt-6-luna'}), \
+                patch('citysim.ai.explain_result', return_value=Explanation('Ответ OpenAI', 'openai')) as explain:
+            app.run()
+            explain.assert_not_called()
+            app.button(key='calculate').click().run()
+            explain.assert_not_called()
+            app.button(key='explain_plan').click().run()
+            self.assertFalse(app.exception)
+            explain.assert_called_once()
+            self.assertEqual(explain.call_args.kwargs, {
+                'demo_mode': False, 'api_key': 'local-test-key', 'model': 'gpt-6-luna',
+            })
+
+    def test_auto_without_credentials_uses_local_explanation(self):
+        from citysim.ai import explain_result
+        app = self.reference(self.open_app())
+        app.button(key='calculate').click().run()
+        with patch('citysim.ai.explain_result', wraps=explain_result) as explain:
+            app.button(key='explain_plan').click().run()
+            self.assertFalse(app.exception)
+            self.assertTrue(explain.call_args.kwargs['demo_mode'])
+            self.assertTrue(any('OpenAI не настроен' in item.value for item in app.caption))
+
+    def test_forced_demo_does_not_use_available_credentials(self):
+        from citysim.ai import explain_result
+        with patch.dict(os.environ, {'DEMO_MODE': '1', 'OPENAI_API_KEY': 'local-test-key',
+                                     'OPENAI_MODEL': 'gpt-6-luna'}):
+            app = self.reference(self.open_app())
+            app.button(key='calculate').click().run()
+            with patch('citysim.ai.explain_result', wraps=explain_result) as explain:
+                app.button(key='explain_plan').click().run()
+                self.assertFalse(app.exception)
+                self.assertTrue(explain.call_args.kwargs['demo_mode'])
+                self.assertTrue(any('Демонстрационный режим' in item.value for item in app.caption))
+
     def test_district_to_city_drops_district(self):
         app = self.open_app()
         app.selectbox(key='measure_0').set_value('M7').run()
@@ -98,7 +136,7 @@ class ApplicationSmokeTest(unittest.TestCase):
             app.button(key='calculate').click().run()
             self.assertFalse(app.exception)
             self.assertEqual(app.session_state['scenario_state'].plan_a, saved)
-            self.assertTrue(any('черновик' in w.value.lower() for w in app.warning))
+            self.assertTrue(any('вы изменили выбор' in w.value.lower() for w in app.warning))
             self.assertTrue(app.error)
             self.assertTrue(any('56.5431' in item.value for item in app.markdown))
             simulate.assert_not_called()
@@ -166,6 +204,13 @@ class ApplicationSmokeTest(unittest.TestCase):
             table = next(item.value for item in app.dataframe if 'Значение на сцене' in item.value.columns)
             self.assertEqual(len(table), 5)
             self.assertEqual(table.loc[table['Район'] == 'Нура', 'Значение на сцене'].iloc[0], 48)
+
+    def test_cleared_scene_indicator_falls_back_without_breaking_scene(self):
+        with patch('components.city3d.render_city', return_value={}) as scene:
+            app = self.open_app()
+            app.selectbox(key='scene_indicator').set_value(None).run()
+            self.assertFalse(app.exception)
+            self.assertIn(scene.call_args.args[0]['selected_indicator'], {'T1', 'T2', 'E1', 'E2', 'S1', 'S2', 'B1', 'B2', 'C1', 'C2'})
 
 
 if __name__ == '__main__':

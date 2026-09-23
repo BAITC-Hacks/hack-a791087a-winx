@@ -12231,15 +12231,15 @@ function Xl(e, t) {
 //#region src/main.js
 var Zl = {
 	T1: "Разгрузка дорог",
-	T2: "Общественный транспорт",
+	T2: "Доступность общественного транспорта",
 	E1: "Озеленение",
 	E2: "Качество воздуха",
 	S1: "Школы и детсады",
-	S2: "Первичная медпомощь",
+	S2: "Поликлиники и первичная медпомощь",
 	B1: "Безопасность улиц",
-	B2: "Безопасность движения",
+	B2: "Безопасность дорожного движения",
 	C1: "Надёжность ЖКХ",
-	C2: "Решение обращений"
+	C2: "Скорость решения обращений жителей"
 };
 function $(e, t, n) {
 	let r = document.createElement(e);
@@ -12255,7 +12255,7 @@ function Ql({ parentElement: e, data: t, key: n, setStateValue: r }) {
 	if (!s) return i.append($("p", "city-caption", "Сцена не может прочитать данные. Показатели доступны в таблице под макетом.")), i.dataset.stateId = "", a.error !== "render_failed" && r("render_error", { code: "render_failed" }), a.error = "render_failed", a.protocolError = !0, () => i.replaceChildren();
 	i.dataset.stateId = s.id;
 	let c = t.selected_indicator, l = t.states.find((e) => e.id === "A"), u = t.states.find((e) => e.id === "B"), d = l && u ? Yl(l, u) : null, f = d ? Xl(d, c) : [], p = t.selected_district, m = null, h = !1, g = null, _ = $("header", "city-header"), v = $("div", "city-title-block");
-	v.append($("span", "city-eyebrow", "АСТАНА / ЛАБОРАТОРИЯ РЕШЕНИЙ"), $("h3", "", "Город, который можно понять")), _.append(v, $("span", "city-badge", s.label));
+	v.append($("span", "city-eyebrow", "ПЯТЬ РАЙОНОВ · ШКАЛА 0–100"), $("h3", "", "Как изменится город")), _.append(v, $("span", "city-badge", s.label));
 	let y = $("div", "city-layout"), b = $("div", "map-column"), x = $("div", "city-viewport"), S = $("div", "map-tag", `${c} · ${Zl[c]}`);
 	if (x.append(S), t.diff_only) {
 		let e = f.length ? "Изменения A → B по выбранному показателю" : "Различий по выбранному показателю нет";
@@ -12273,7 +12273,7 @@ function Ql({ parentElement: e, data: t, key: n, setStateValue: r }) {
 	}
 	x.append(C);
 	let E = $("div", "city-legend");
-	E.append($("span", "legend-alert", "● Ниже 40"), $("span", "legend-normal", "● 40–100"), $("span", "legend-scale", "Высота столбца: 0–100 · риска: 40"));
+	E.append($("span", "legend-alert", "● Ниже 40 — проблема"), $("span", "legend-normal", "● От 40 — выше порога"), $("span", "legend-scale", "Выше столбец — лучше показатель. Отметка: 40."));
 	let D = $("div", "district-navigation");
 	D.setAttribute("aria-label", "Выбор района");
 	let O = $("aside", "city-detail");
@@ -12295,32 +12295,34 @@ function Ql({ parentElement: e, data: t, key: n, setStateValue: r }) {
 				let a = d?.[e.id]?.indicators[c];
 				a && i.append($("small", "comparison-line", A(a))), n.append(r, i), O.append(n);
 			}
-			O.append($("p", "detail-footnote", `Score города: ${s.score.toFixed(4)}. Выберите район для всех десяти показателей.`));
+			O.append($("p", "detail-footnote", `Итоговый балл города: ${s.score.toFixed(4)}. Нажмите на район, чтобы увидеть его показатели.`));
 			return;
 		}
 		let e = s.districts.find((e) => e.id === p), t = e.indicators[c];
 		O.append($("span", "city-eyebrow", "ВЫБРАННЫЙ РАЙОН"), $("h3", "district-heading", e.name)), O.append($("p", "indicator-title", `${c} · ${Zl[c]}`));
 		let n = $("div", `indicator-value ${t < 40 ? "is-critical" : ""}`);
-		n.append($("strong", "", String(t)), $("span", "", "/ 100")), O.append(n, $("p", `indicator-status ${t < 40 ? "is-critical" : ""}`, t < 40 ? "Ниже критического порога 40" : "Не ниже критического порога 40"));
+		n.append($("strong", "", String(t)), $("span", "", "/ 100")), O.append(n, $("p", `indicator-status ${t < 40 ? "is-critical" : ""}`, t < 40 ? "Требует внимания: значение ниже 40" : "Критический порог пройден: значение не ниже 40"));
 		let r = d?.[e.id]?.indicators[c];
 		if (r) {
 			let e = $("div", "selected-comparison");
-			e.append($("span", "detail-label", "Сравнение A → B"), $("strong", "", A(r))), O.append(e);
+			e.append($("span", "detail-label", "Ваш план A → альтернатива B"), $("strong", "", A(r))), O.append(e);
 		}
 		let i = $("div", "district-score");
-		i.append($("span", "", "Районный балл"), $("strong", "", s.district_scores[e.id].toFixed(4))), O.append(i, $("div", "detail-label", "Все показатели района"));
-		let a = $("div", "indicator-grid");
+		i.append($("span", "", "Общий балл района"), $("strong", "", s.district_scores[e.id].toFixed(4)));
+		let a = $("details", "all-indicators");
+		a.append($("summary", "", "Все 10 показателей района")), O.append(i, a);
+		let o = $("div", "indicator-grid");
 		for (let [t, n] of Object.entries(e.indicators)) {
 			let r = $("div", `indicator-cell ${n < 40 ? "is-critical" : ""} ${t === c ? "active" : ""}`);
-			r.title = Zl[t], r.append($("span", "", t), $("strong", "", String(n)));
+			r.title = Zl[t], r.append($("span", "indicator-name", `${t} · ${Zl[t]}`), $("strong", "", String(n)));
 			let i = d?.[e.id]?.indicators[t];
 			if (i) {
 				let e = i.delta > 0 ? `+${i.delta}` : String(i.delta);
 				r.append($("small", "comparison-line indicator-comparison", `A ${i.a}\nB ${i.b}\nΔ ${e}`));
 			}
-			a.append(r);
+			o.append(r);
 		}
-		O.append(a, $("p", "detail-footnote", d ? "В ячейках показаны A, B и Δ B−A. Текущее значение, статус и балл относятся к выбранному плану. Здания и расположение районов — условные." : "Числа взяты из расчётной модели. Здания и расположение районов — условные."));
+		a.append(o), O.append($("p", "detail-footnote", d ? "A — ваш план, B — альтернатива. Δ — разница B минус A: плюс означает улучшение, минус — ухудшение. Крупное число относится к выбранному плану." : "Все показатели: от 0 до 100, больше — лучше. Значение ниже 40 считается проблемой и снижает итоговый балл города."));
 	}
 	function ee(e) {
 		if (e !== null && !s.districts.some((t) => t.id === e)) return;
@@ -12333,7 +12335,7 @@ function Ql({ parentElement: e, data: t, key: n, setStateValue: r }) {
 		let t = $("button", "", e.name);
 		t.type = "button", t.onclick = () => ee(e.id), k.set(e.id, t), D.append(t);
 	}
-	b.append(x, E, D), y.append(b, O), i.append(_, y, $("p", "city-caption", "Условный 3D-макет · перетаскивайте для вращения, колесо или два пальца — масштаб. Это не географическая карта.")), j();
+	b.append(x, E, D), y.append(b, O), i.append(_, y, $("p", "city-caption", "Нажмите на район или его кнопку, чтобы открыть показатели. Перетаскивайте для вращения, используйте +/− для масштаба. Данные показывают столбцы; здания и расположение районов условные.")), j();
 	function M(e) {
 		if (h) return;
 		h = !0, m && (a.camera = m.getCamera()), m?.dispose(), m = null, x.dataset.renderReady = "false", T.forEach((e) => {

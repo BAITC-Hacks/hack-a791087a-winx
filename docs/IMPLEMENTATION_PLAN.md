@@ -351,4 +351,4 @@ UI полного поиска, свободный текст поручений
 Подход v2 и двусторонний обмен описаны в [Streamlit Docs](https://docs.streamlit.io/develop/concepts/custom-components/components-v2).
 Локальная npm-сборка Three.js описана в [Three.js Installation](https://threejs.org/manual/pages/installation.html).
 В локальном V1-P уже установлены Three.js 0.186.0 и Vite 8.3.0; версии зафиксированы
-в components/city3d/frontend/package-lock.json и THIRD_PARTY. V1 завершён; V2 остаётся открыт.
+в components/city3d/frontend/package-lock.json и THIRD_PARTY. V1 и V2 завершены.

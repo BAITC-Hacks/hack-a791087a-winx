@@ -64,7 +64,7 @@ class ReviewAppTests(unittest.TestCase):
             self.assertEqual(review.call_count, 1)
             app.selectbox(key='review_max_changes').set_value(0).run()
             app.button(key='run_review').click().run()
-            self.assertTrue(any('В проверенных вариантах улучшений нет' in item.value for item in app.info))
+            self.assertTrue(any('Среди проверенных вариантов' in item.value for item in app.info))
             self.assertEqual(app.session_state['scenario_state'].plan_a,
                              app.session_state['scenario_state'].plan_b)
 
@@ -101,7 +101,7 @@ class ReviewAppTests(unittest.TestCase):
                 replace(review, status='incomplete'), Explanation('Частичный результат', 'demo', 'Лимит времени'))):
             app.button(key='run_review').click().run()
         self.assertFalse(app.exception)
-        self.assertTrue(any('не завершена' in item.value.lower() for item in app.warning))
+        self.assertTrue(any('остановилась раньше срока' in item.value.lower() for item in app.warning))
         self.assertTrue(any('Лимит времени' in item.value for item in app.warning))
         self.assertFalse(app.button(key='accept_b').disabled)
         b = deepcopy(app.session_state['scenario_state'].plan_b)

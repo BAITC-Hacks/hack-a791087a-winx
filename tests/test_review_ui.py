@@ -23,7 +23,7 @@ class ReviewPresentationTests(unittest.TestCase):
 
     def test_comparison_is_a_to_b_not_baseline_delta(self):
         comparison = build_comparison(self.a, self.b, self.dataset)
-        score = next(row for row in comparison['city'] if row['Показатель'] == 'Score')
+        score = next(row for row in comparison['city'] if row['Показатель'] == 'Общий балл города')
         self.assertAlmostEqual(score['B − A'], 56.69056 - 56.54307)
         self.assertNotEqual(score['B − A'], self.b.score_delta)
         self.assertEqual(len(comparison['indicators']), 50)
@@ -32,15 +32,15 @@ class ReviewPresentationTests(unittest.TestCase):
 
     def test_incomplete_is_independent_of_improvement_and_real_check_count(self):
         summary = review_summary(replace(self.review, status='incomplete'))
-        self.assertIn('не завершена', summary['status'].lower())
-        self.assertIn('улучшение', summary['outcome'].lower())
+        self.assertIn('остановилась раньше срока', summary['status'].lower())
+        self.assertIn('общий балл выше', summary['outcome'].lower())
         self.assertEqual(summary['checked'], len(self.review.checks))
         self.assertEqual(len(build_review_log(self.review, self.dataset)), len(self.review.checks))
 
     def test_no_changes_is_not_a_claim_of_global_optimum(self):
         review, _ = review_scenario(self.a, self.dataset, ReviewConstraints(max_changes=0))
         summary = review_summary(review)
-        self.assertEqual(summary['outcome'], 'В проверенных вариантах улучшений нет')
+        self.assertEqual(summary['outcome'], 'Среди проверенных вариантов подходящего улучшения нет')
         self.assertEqual(summary['checked'], 0)
         self.assertNotIn('оптимален', str(summary))
 
