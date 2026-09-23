@@ -1,34 +1,34 @@
 # @alikhan — состояние
 
 ## Сейчас
-E1/E2 завершены; E1 опубликован в `f6110e7`. База напарника `d12ac6a`.
+C0 завершён; предыдущие E1/E2 опубликованы в `f6110e7` / `1e812e4`.
 Git email: achabarovcuru@gmail.com; зона: engine, тесты, API, поиск и запуск.
 Текущий коммит состояния: `git log -1 --format=%h -- docs/state/alikhan.md`.
 
 ## Сделано
-В citysim/engine.py реализованы validate_scenario и simulate по API v1.
-tests/test_engine.py: 21 тест, все коды ошибок, эталон/61, 120 перестановок.
-tests/test_engine_boundaries.py: 12 тестов границ, лагов, синергий, clip и изоляции.
-API уточняет сочетания ошибок и канонизацию effects; общие типы не менялись.
-План независимо проверен; выводы и результаты — docs/ENGINE_REVIEW.md.
+citysim/review_models.py: типы ревизора/сцены, лимиты, проверки исходника/locked/замен/EPS.
+tests/test_review_contracts.py: 20 тестов; baseline/подменённые числа, locked, EPS, два раунда.
+docs/API.md: опубликованы C0 и ScenePayload v1, отдельные будущие сигнатуры S1/A2.
+Пример JSON сцены из API выполнен на реальном engine и не делит словари с результатом.
+PLAN/HANDOFF обновлены; независимое ревью исправлено и проверено тестами.
 
 ## Не закончено
-U1/I1/A1/V1/V2 — зона напарника; C0/S1 ещё не реализованы.
-README/IMPLEMENTATION_PLAN: запрос актуализировать E1/E2 передан владельцу через HANDOFF.
+S1 (citysim/search.py) ещё не реализован; U1/I1/A1/V1/V2/A2 — зона напарника.
+README/IMPLEMENTATION_PLAN: запрос актуализировать E1/E2/C0 передан через HANDOFF.
 
 ## Решения
-Первые два этапа нашей зоны — E1 и E2, как указано в PLAN/HANDOFF.
-API v1 достаточен; TASK/DATASET/data.py не меняются.
-effects содержат прибавки до clip, indicator_deltas — фактические изменения после clip.
-Старое ограничение по времени снято; обязательность 3D сохраняется для следующих этапов.
+API v1, TASK/DATASET/data.py и engine сохранены; C0 в отдельном модуле.
+max_changes=0/1; locked — точные пары исходного A; оба раунда проверяются против A.
+EPS=1e-9 относительно A исключает накопление допуска; ranking описан в API.
+ScenePayload — TypedDict, runtime-builder в ui.scene принадлежит напарнику.
 
 ## Грабли
-README/UI описывают скелет; законченный engine сам по себе не означает готовность формы.
-Запросы HANDOFF на E1 и effects/deltas/M11 выполнены; UI/AI готовы к подключению engine.
+Не импортировать search/reviewer/ui.scene до реализации соответствующих этапов.
+Типы frozen не защищают вложенные dict: S1 обязан копировать снимки и previous.
 
 ## Проверка
-`python run.py --check` → 45 тестов OK, включая AppTest и offline AI; pip check OK.
+`python run.py --check` → 65 тестов OK, включая AppTest, offline AI и контракты C0.
 Эталон simulate: cost=95, remaining=5, Score=56.54307, Ncrit=0.
 
 ## Следующий шаг
-C0: согласовать и опубликовать контракты ревизора/3D согласно IMPLEMENTATION_PLAN.
+S1: реализовать generate_candidates/review_candidates с ограничением 20 и тестами.

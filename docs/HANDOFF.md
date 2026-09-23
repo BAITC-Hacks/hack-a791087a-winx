@@ -83,3 +83,32 @@ E1 опубликован в `f6110e7`. Добавлен `tests/test_engine_boun
 |---|---|---|---|
 | @AaaDddmyrza | При обновлении README/IMPLEMENTATION_PLAN отметить также E2 | Граничные тесты выделены в tests/test_engine_boundaries.py; полный check 45 OK; UI остаётся отдельным U1/I1 | Дополнение к запросу выше |
 | @alikhan | Следующим этапом C0 опубликовать review_models/ScenePayload | План проверен; E1/E2 больше не блокируют контракт ревизора/3D | Следующая задача, вне текущих двух этапов |
+
+## C0 готов — @alikhan
+
+Доступен `citysim/review_models.py`: ReviewConstraints, CandidateCheck,
+ReviewResult; TypedDict ScenePayload/SceneState/SceneEvents; EPS и лимиты 2×10.
+Полный контракт и пример JSON-передачи — [API.md](API.md), разделы C0.
+Исходные API v1, датасет и engine не изменены. Поиск S1 пока не реализован.
+
+- `validate_review_input(source, dataset, constraints)` вызывается до поиска/AI:
+  baseline и изменённые числа отклоняются, исходник сверяется с simulate.
+- `max_changes` сейчас строго int 0/1. locked закрепляет меру вместе с районом.
+  `check_candidate_constraints` дополняет, но не заменяет validate_scenario.
+- `classify_outcome` всегда сравнивает с первоначальным A. EPS нельзя применять
+  цепочкой к предыдущему best; правило выбора между кандидатами уточнено в API.
+- `status` и `outcome` независимы: incomplete может сохранять improved.
+- Сцена: schema_version=1; состояния baseline/A/B; score — float;
+  районы/решения — JSON-массивы, городская цель — null; события описаны в API.
+  TypedDict не выполняет runtime-валидацию: builder/render_city остаются задачей V1.
+
+Проверка: 20 новых тестов контракта, полный check 65 OK. Пример сцены из API
+выполнен с реальным результатом engine: JSON, пять районов и решений, Score
+и независимость вложенных словарей подтверждены. Это не проверка рендера 3D.
+Ранее открытый запрос C0 на ReviewResult/ScenePayload выполнен.
+
+| Кому | Что нужно | Зачем / формат | Статус |
+|---|---|---|---|
+| @AaaDddmyrza | После pull использовать C0 в V1/A2 | Доступны импорты из review_models; описание ScenePayload/событий в API; поиск добавится отдельно в S1 | Готово к подключению |
+| @AaaDddmyrza | Актуализировать C0 в IMPLEMENTATION_PLAN и общих документах | max_changes=0/1, EPS относительно A, TypedDict сцены, 20 тестов; текущий engine/API не ломаются | Запрос владельцу документов |
+| @alikhan | Реализовать S1 по API C0 | Генерация и проверка максимум 20 уникальных кандидатов, два раунда с неизменным A | Следующий этап |
