@@ -51,7 +51,8 @@
 | @alikhan | Новые citysim/search.py, citysim/review_models.py, tests/test_search.py; docs/API.md; при необходимости models.py | Проверка кандидатов, детерминированный поиск, общие контракты |
 | @alikhan | run.py, requirements.txt, .gitignore, scripts/dependency_report.py, docs/DEPENDENCIES.json | Установка, зависимости и финальная техническая приёмка |
 | @AaaDddmyrza | app.py; новые ui/__init__.py, ui/forms.py, ui/results.py, ui/state.py; tests/test_app.py, tests/test_state.py | Форма, снимки, паспорт, интеграция |
-| @AaaDddmyrza | citysim/ai.py; новый citysim/reviewer.py; tests/test_ai.py, tests/test_reviewer.py | Объяснения, генерация предложений, offline/live-оркестрация |
+| @alikhan | Новый citysim/reviewer.py; tests/test_reviewer.py | A2 backend: генерация предложений и offline/live-оркестрация через S1 |
+| @AaaDddmyrza | citysim/ai.py; tests/test_ai.py; новый ui/review.py и UI-тесты | Объяснения A1 и интерфейс ревизора A2 |
 | @AaaDddmyrza | scripts/start_live.py, tests/test_live_launcher.py, docs/SECRETS.md | Подготовка существующего API-ключа без сохранения в синхронизируемую папку |
 | @AaaDddmyrza | Новый ui/scene.py, tests/test_scene_payload.py; components/city3d/** | 3D-компонент, обмен событиями, отображение A/B |
 | @AaaDddmyrza | README, IDEA, PLAN, IMPLEMENTATION_PLAN, THIRD_PARTY, DEMO | Сводные документы, описание демо, комплект сдачи |
@@ -103,62 +104,28 @@ flowchart LR
 
 Сигнатуры validate_scenario/simulate и API v1 сохранены. Подтверждение — тесты и API.md.
 
-## U1 — форма пяти решений: @AaaDddmyrza
+## U1 — форма пяти решений: @AaaDddmyrza — завершён
 
-**Файлы:** app.py, ui/forms.py, ui/__init__.py, tests/test_app.py.
-**Интерфейс:** `render_decisions(dataset: Dataset) -> tuple[Decision, ...]`;
-пять слотов, ID мер/районов из load_dataset, городская мера всегда с None.
+Файлы: app.py, ui/forms.py, ui/labels.py, tests/test_app.py.
 
-- [ ] Сделать пять строк выбора с устойчивыми ключами `measure_0`…`measure_4`,
-  `district_0`…`district_4`. Убирать уже занятые меры из остальных списков,
-  но не заменять этим серверную валидацию. Доступны все пять направлений.
-- [ ] Стоимость и ошибки брать из validate_scenario. До E1 в UI отключить отправку
-  с подписью «Расчёт ещё не подключён»; мок использовать в тестах, не выдавать за расчёт.
-- [ ] AppTest: смена районной меры на городскую убирает район; отправляется None.
-  На ValidationResult с budget_exceeded выводится сообщение, simulate/AI не вызываются.
+- [x] Пять слотов с устойчивыми ключами; выбранные меры скрываются в других слотах.
+- [x] Районная мера требует район; городская передаёт None и скрывает выбор района.
+- [x] Стоимость и русские ошибки берутся из validate_scenario; нет требования покрытия пяти направлений.
+- [x] Кнопка примера заполняет только черновик. Бюджет 101 отклоняется без simulate/AI.
+- [x] AppTest и браузерная проверка выбора/расчёта, включая узкий экран.
 
-```python
-invalid = ValidationResult(101, (ValidationIssue('budget_exceeded', 'Бюджет превышен'),))
-with patch('citysim.engine.validate_scenario', return_value=invalid), \
-     patch('citysim.engine.simulate') as simulate_mock, \
-     patch('citysim.ai.explain_result') as ai_mock:
-    app = AppTest.from_file('app.py').run()
-    app.button(key='calculate').click().run()
-    self.assertTrue(app.error)
-    simulate_mock.assert_not_called()
-    ai_mock.assert_not_called()
-```
+## I1 — соединение и снимки: @AaaDddmyrza — завершён
 
-- [ ] Не требовать одну меру каждого направления. Успешная форма выдаёт ровно
-  пять Decision; показать стоимость/остаток только после ответа валидатора.
-- [ ] Коммит/push: `feat: add five-decision form`; U1 закрыть после этих проверок.
+Файлы: app.py, ui/state.py, tests/test_state.py, tests/test_app.py.
 
-## I1 — соединение и снимки: @AaaDddmyrza, численная приёмка @alikhan
+- [x] Нажатие «Рассчитать и сохранить A» проверяет набор и вызывает simulate.
+- [x] InvalidScenarioError показывает ошибки и сохраняет предыдущий A.
+- [x] Новый A — deepcopy результата; B, предыдущее объяснение и ревизия очищаются.
+- [x] Редактирование черновика не меняет сохранённый A; несовпадение явно подписано.
+- [x] Перестановка одинаковых решений не делает план устаревшим; baseline нельзя сохранить как A.
+- [x] Эталон из тестов напарника подтверждён AppTest и браузером: 95 / 5 / 56.5431 / 0.
 
-**Файлы:** app.py, ui/state.py, tests/test_state.py, tests/test_app.py.
-**Тип внутри UI:** ScenarioState(draft: tuple[Decision,...],
-plan_a: SimulationResult | None, plan_b: SimulationResult | None).
-**Функции:** `save_a(state, result) -> ScenarioState`,
-`set_draft(state, decisions) -> ScenarioState`; создают копии, не меняют аргументы.
-
-- [ ] При «Рассчитать» вызвать validate/simulate; InvalidScenarioError показать
-  через .validation, не вызывать AI. NotImplementedError до E1 — только сообщение о недоступности.
-- [ ] При успешном новом A сохранить deepcopy результата и очистить B/ревизию;
-  редактирование draft не меняет сохранённые планы. Подписать их наборы решений.
-- [ ] Проверить на эталоне, используя реальные engine и AppTest:
-
-```python
-state = save_a(ScenarioState((), None, None), simulate(reference, dataset))
-edited = set_draft(state, (Decision('M1', 'esil'),))
-self.assertEqual(edited.plan_a, state.plan_a)
-self.assertEqual(len(edited.plan_a.decisions), 5)
-self.assertIsNone(edited.plan_b)
-```
-
-- [ ] Полный путь: заполнение эталона → 95/5/56.5431/0 → demo-объяснение;
-  затем невалидный черновик → ошибка без нового результата, старый A явно подписан.
-- [ ] @alikhan сверяет числа; README получает реальный сценарий. Полный check,
-  коммит/push `feat: connect scenario calculation and saved state`.
+Хранение в сессии Streamlit, без постоянной записи на диск.
 
 ## E2 — границы математики: @alikhan — завершён
 
@@ -170,22 +137,18 @@ self.assertIsNone(edited.plan_b)
 - [x] effects до clip, indicator_deltas после clip; трассировка всех показателей.
 - [x] Независимость словарей результата, исходных данных и повторных расчётов.
 
-## A1 — паспорт и объяснение: @AaaDddmyrza
+## A1 — паспорт и объяснение: @AaaDddmyrza — завершён
 
-**Файлы:** ui/results.py, app.py, citysim/ai.py, tests/test_ai.py, tests/test_app.py.
-**Интерфейсы:** `render_result(result: SimulationResult, dataset: Dataset) -> None`;
-существующий explain_result без изменения сигнатуры.
+Файлы: ui/results.py, app.py, citysim/ai.py; tests/test_results.py/test_ai.py/test_app.py.
 
-- [ ] Показать cost/remaining_budget/before/after/score_delta; пять районов,
-  критические пары и трассировку effects отдельно от фактических deltas.
-- [ ] Шаблон demo: сильные стороны, изменения, оставшиеся проблемы, компромисс,
-  следующий шаг. Критические пары берутся из indicators; никаких придуманных прогнозов.
-- [ ] В тесте с реальным эталоном проверить числа 95, 5, 56.5431, нулевой Ncrit,
-  отсутствие утверждения «это baseline» и неизменность SimulationResult.
-- [ ] Проверить demo с фиктивным ключом: OpenAI не вызывается; live-ответ,
-  пустой ответ и ошибка провайдера — моками. Реальный API только при отдельно
-  настроенном доступе; отсутствие такого доступа не блокирует демо.
-- [ ] Полный check, README и коммит/push `feat: explain scenario outcomes and tradeoffs`.
+- [x] Сохранённые решения, стоимость/остаток, Score до/после, delta, Ncrit и слабейший район.
+- [x] Все 50 показателей, достигнутый порог 40 и оставшиеся критические пары.
+- [x] Эффекты до clip и синергии отдельно от фактических indicator_deltas; тест M11 и clip.
+- [x] Demo объясняет рассчитанные изменения, сильные стороны, риски и компромиссы без сети.
+- [x] Live получает только asdict(result); успешный ответ, пустой ответ и ошибка проверены моками.
+- [x] Запрос выполняется только по кнопке; объяснение сохраняется при rerun и очищается при новом A.
+
+Реальный платный вызов не выполнялся; настройки существующего ключа — в SECRETS.md.
 
 ## C0 — контракт расширений: @alikhan — завершён
 
@@ -294,10 +257,13 @@ event = city(data=payload, key='city', on_district_selected_change=lambda: None,
   сообщение и таблицы сохраняются. AppTest не подтверждает рендеринг WebGL.
 - [ ] Не переносить расчёты в JS. Исправить обмен данными и добиться рендеринга сцены в поддерживаемом браузере; таблицы и fallback показывают тот же результат при недоступности WebGL. После приёмки отметить V1 в PLAN.
 
-## A2 — A/B и AI-оркестрация: @AaaDddmyrza
+## A2 — A/B и AI-оркестрация: @alikhan (сервер), @AaaDddmyrza (UI)
 
-**Файлы:** citysim/reviewer.py, tests/test_reviewer.py, ui/state.py,
-ui/results.py, app.py, tests/test_app.py. **Зависимости:** C0, S1, I1/A1.
+**Сервер @alikhan:** citysim/reviewer.py, tests/test_reviewer.py.
+**UI @AaaDddmyrza:** ui/review.py, ui/state.py, ui/results.py, app.py, UI-тесты.
+**Зависимости:** C0, S1, I1/A1 — готовы. По решению пользователя серверный пакет
+A2 выполняется параллельно V1; затем напарник подключает UI ревизора.
+Подробные критерии и границы файлов: [NEXT_PARALLEL_STEPS.md](NEXT_PARALLEL_STEPS.md).
 **Интерфейс:** `review_scenario(source, dataset, constraints, *, demo_mode=True,
 api_key=None, model=None) -> tuple[ReviewResult, Explanation]`.
 

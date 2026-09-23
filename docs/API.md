@@ -10,7 +10,9 @@
 Работают `load_dataset`, `compute_score`, `baseline`, `explain_result` и экран baseline.
 E1 реализован: `validate_scenario` проверяет все правила, `simulate` рассчитывает
 валидный сценарий и возвращает трассировку. Формат API v1 сохранён.
-UI пока показывает baseline; подключение формы и расчёта — этапы U1/I1 напарника.
+U1/I1/A1 реализованы: форма пяти решений, сохранённый A, паспорт и объяснение.
+Черновик не подменяет A; новый расчёт сбрасывает B, ревизию и объяснение.
+3D пока показывает baseline; подключение сохранённого A остаётся этапом V1.
 Live API подключён, но наличие доступа/ключа проверяется отдельно; demo работает без них.
 C0 реализован: типы ревизора/сцены и чистые проверки ограничений/результата.
 V1-P реализован: ui.scene и локальный Three.js строят/показывают baseline,
@@ -292,7 +294,7 @@ review = review_candidates(a, proposals[10:], dataset, constraints, previous=fir
 ### Следующий этап: A2 (пока не доступен для импорта)
 
 ```python
-# citysim.reviewer — владелец @AaaDddmyrza
+# citysim.reviewer — владелец @alikhan; UI вызова — @AaaDddmyrza
 def review_scenario(source, dataset, constraints, *, demo_mode=True,
                     api_key=None, model=None) -> tuple[ReviewResult, Explanation]: ...
 ```
