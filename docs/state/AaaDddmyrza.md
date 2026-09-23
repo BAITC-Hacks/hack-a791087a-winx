@@ -1,8 +1,8 @@
 # @AaaDddmyrza — состояние
 
 ## Сейчас
-A2 UI/V2 готовы в codex/review-ui-v2 от main85ae360 (V1/PR3 объединён).
-Последний коммит пакета: git log -1 -- app.py ui/review.py.
+A2 UI/V2 готовы в codex/review-ui-v2 с обновлениями main8c9f71f (V1/PR3 объединён).
+Продуктовый коммит ecbf25c; интегрирован main8c9f71f, сигнатуры прежние.
 Git email: adildaulet2005@gmail.com; зона app/ui/AI/3D.
 
 ## Сделано
@@ -19,7 +19,7 @@ V2: baseline/A/B, пять слоёв по два показателя, разл
 Вводный статус API.md обновляет владелец; запрос в HANDOFF.
 
 ## Решения
-TASK/DATASET/data.py/engine/shared models/API/reviewer не изменены.
+UI/V2 не меняет TASK/DATASET/data.py/engine/shared models/API/reviewer.
 ScenePayload C0 прежний; active_state — частный параметр bridge рядом с view_key.
 Менять ограничения → сброс B/ревизии; редактировать draft → сохранить A/B.
 Demo-превью и тесты без настоящих API-вызовов; ключи не выводились/не коммитились.
@@ -30,7 +30,7 @@ Demo-превью и тесты без настоящих API-вызовов; к
 .env.example имеет пользовательские правки; не включать в продуктовый коммит.
 
 ## Проверка
-python run.py --check: 178 Python; frontend npm test: 16 JS; npm run build.
+python run.py --check: 181 Python; frontend npm test: 16 JS; npm run build.
 Demo: A95/56.54307 → B80/56.69056; три ухудшения видны, A не меняется до принятия.
 Chromium: ручнойB/A=B/accept, камера, WebGL loss/unavailable/retry, компонент390.
 Preview http://127.0.0.1:8517 (DEMO_MODE=1); сценарий docs/DEMO.md.

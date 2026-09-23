@@ -36,4 +36,4 @@ OpenAI для этого сценария не требуются. A/B хран�
 A/B оставались доступны. Платный live и физический pinch не проверялись.
 
 Автоматические проверки: `python run.py --check`; из `components/city3d/frontend`:
-`npm test`, `npm run build`. Итог пакета: 178 Python и 16 JS тестов.
+`npm test`, `npm run build`. Итог пакета: 181 Python и 16 JS тестов.

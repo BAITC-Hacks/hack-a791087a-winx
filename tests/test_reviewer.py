@@ -157,10 +157,32 @@ class ReviewerTests(unittest.TestCase):
             self.assertEqual(len(request_payload["previous_checks"]), index)
             self.assertNotIn("api_key", call.kwargs)
             self.assertIs(call.kwargs.get("store"), False)
+            self.assertEqual(call.kwargs.get("max_output_tokens"), 4096)
+            self.assertNotIn("reasoning", call.kwargs)
             self.assertNotIn("score", request_payload)
         sdk.assert_called_once_with(
             api_key="secret-test-key", timeout=15.0, max_retries=0,
         )
+
+    def test_luna_uses_no_reasoning_and_other_models_keep_request_shape(self):
+        for model in ("gpt-6-luna", "test-model", "gpt-4.1", "gpt-6-astra"):
+            with self.subTest(model=model):
+                first, second = self.candidates[:2]
+                client = self.make_client((response(wire_round((first,))),
+                                           response(wire_round((second,)))))
+                with patch("openai.AsyncOpenAI", return_value=client):
+                    review, explanation = self.run_review(
+                        self.source, self.dataset, self.constraints,
+                        demo_mode=False, api_key="key", model=model,
+                    )
+                self.assertEqual(client.responses.create.await_count, 2)
+                self.assertEqual(explanation.mode, "openai")
+                for call in client.responses.create.await_args_list:
+                    self.assertEqual(call.kwargs["max_output_tokens"], 4096)
+                    if model == "gpt-6-luna":
+                        self.assertEqual(call.kwargs["reasoning"], {"effort": "none"})
+                    else:
+                        self.assertNotIn("reasoning", call.kwargs)
 
     def test_second_round_failure_keeps_first_round_verified_candidate(self):
         first = self.candidates[0]

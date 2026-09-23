@@ -41,6 +41,7 @@ class ExplanationTests(unittest.TestCase):
 
     @patch("openai.OpenAI")
     def test_empty_response_falls_back(self, client):
+        client.return_value.responses.create.return_value.status = "completed"
         client.return_value.responses.create.return_value.output_text = "   "
         result = explain_result(self.result, demo_mode=False, api_key="test-only", model="test-model")
         self.assertEqual(result.mode, "demo")
@@ -94,6 +95,7 @@ class ExplanationTests(unittest.TestCase):
             Decision("M4", "saryarka"),
         ), load_dataset())
         original = json.dumps(asdict(result), ensure_ascii=False)
+        client.return_value.responses.create.return_value.status = "completed"
         client.return_value.responses.create.return_value.output_text = "Факты по сценарию."
 
         explanation = explain_result(result, demo_mode=False, api_key="test-only", model="test-model")
@@ -104,7 +106,38 @@ class ExplanationTests(unittest.TestCase):
         self.assertEqual(kwargs["input"], original)
         self.assertEqual(json.dumps(json.loads(kwargs["input"]), ensure_ascii=False), original)
         self.assertEqual(kwargs["store"], False)
+        self.assertEqual(kwargs["max_output_tokens"], 700)
+        self.assertNotIn("reasoning", kwargs)
         self.assertEqual(json.dumps(asdict(result), ensure_ascii=False), original)
+
+    def test_luna_request_uses_no_reasoning_and_larger_explanation_budget(self):
+        for model in ("gpt-6-luna", "test-model", "gpt-4.1", "gpt-6-astra"):
+            with self.subTest(model=model), patch("openai.OpenAI") as client:
+                client.return_value.responses.create.return_value.status = "completed"
+                client.return_value.responses.create.return_value.output_text = "Факты по сценарию."
+                result = explain_result(
+                    self.result, demo_mode=False, api_key="test-only", model=model,
+                )
+                self.assertEqual(result.mode, "openai")
+                kwargs = client.return_value.responses.create.call_args.kwargs
+                self.assertEqual(kwargs["max_output_tokens"], 1600 if model == "gpt-6-luna" else 700)
+                if model == "gpt-6-luna":
+                    self.assertEqual(kwargs["reasoning"], {"effort": "none"})
+                else:
+                    self.assertNotIn("reasoning", kwargs)
+
+    @patch("openai.OpenAI")
+    def test_incomplete_partial_response_falls_back_to_demo(self, client):
+        client.return_value.responses.create.return_value.status = "incomplete"
+        client.return_value.responses.create.return_value.output_text = "Частичный ответ"
+
+        result = explain_result(
+            self.result, demo_mode=False, api_key="test-only", model="gpt-6-luna",
+        )
+
+        self.assertEqual(result.mode, "demo")
+        self.assertTrue(result.warning)
+        self.assertIn("52.5577", result.text)
 
 
 if __name__ == "__main__":
